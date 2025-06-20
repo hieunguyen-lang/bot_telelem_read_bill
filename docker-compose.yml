@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  telegram-bot:
+    build: .
+    container_name: telegram_bill_bot
+    volumes:
+      - .:/app
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/your-creds.json
+      # - HTTPS_PROXY=http://yourproxy:port  # Bỏ comment nếu bạn cần proxy
+    restart: unless-stopped
