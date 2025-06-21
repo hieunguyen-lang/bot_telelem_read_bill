@@ -1,0 +1,61 @@
+CREATE DATABASE IF NOT EXISTS bill_data CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+USE bill_data;
+
+CREATE TABLE IF NOT EXISTS thong_tin_hoa_don_rut (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    thoi_gian DATETIME,
+    nguoi_gui VARCHAR(255),
+    ten_khach VARCHAR(255),
+    so_dien_thoai VARCHAR(20),
+    so_tien_rut VARCHAR(50),
+    phan_tram_phi VARCHAR(20),
+    so_tien_phi VARCHAR(50),
+    so_tien_chuyen_khoan VARCHAR(50),
+    lich_canh_bao VARCHAR(50),
+    so_tai_khoan TEXT,
+    ghi_chu TEXT,
+    ngan_hang VARCHAR(100),
+    don_vi_ban VARCHAR(255),
+    dia_chi_don_vi TEXT,
+    ngay_giao_dich VARCHAR(50),
+    gio_giao_dich VARCHAR(50),
+    tong_so_tien VARCHAR(50),
+    don_vi_tien_te VARCHAR(10),
+    loai_the VARCHAR(50),
+    ma_giao_dich VARCHAR(100),
+    ma_don_vi_chap_nhan VARCHAR(100),
+    so_lo VARCHAR(50),
+    so_tham_chieu VARCHAR(100),
+    loai_giao_dich VARCHAR(100),
+    caption_goc TEXT
+);
+
+CREATE TABLE IF NOT EXISTS thong_tin_hoa_don_dao (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    thoi_gian DATETIME,
+    nguoi_gui VARCHAR(255),
+    ten_khach VARCHAR(255),
+    so_dien_thoai VARCHAR(20),
+    so_tien_dao VARCHAR(50),
+    phan_tram_phi VARCHAR(20),
+    so_tien_phi VARCHAR(50),
+    so_tien_rut_thieu VARCHAR(50),
+    tong VARCHAR(50),
+    lich_canh_bao VARCHAR(50),
+    ghi_chu TEXT,
+    ngan_hang VARCHAR(100),
+    don_vi_ban VARCHAR(255),
+    dia_chi_don_vi TEXT,
+    ngay_giao_dich VARCHAR(50),
+    gio_giao_dich VARCHAR(50),
+    tong_so_tien VARCHAR(50),
+    don_vi_tien_te VARCHAR(10),
+    loai_the VARCHAR(50),
+    ma_giao_dich VARCHAR(100),
+    ma_don_vi_chap_nhan VARCHAR(100),
+    so_lo VARCHAR(50),
+    so_tham_chieu VARCHAR(100),
+    loai_giao_dich VARCHAR(100),
+    caption_goc TEXT
+);

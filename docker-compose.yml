@@ -1,12 +1,28 @@
 version: '3.8'
 
 services:
-  telegram-bot:
-    build: .
-    container_name: telegram_bill_bot
-    volumes:
-      - .:/app
+  # telegram-bot:
+  #   build: .
+  #   container_name: telegram_bill_bot
+  #   volumes:
+  #     - .:/app
+  #   environment:
+  #     - GOOGLE_APPLICATION_CREDENTIALS=/app/your-creds.json
+  #     # - HTTPS_PROXY=http://yourproxy:port  # Bỏ comment nếu bạn cần proxy
+  #   restart: unless-stopped
+  mysql:
+    image: mysql:8
+    container_name: mysql_bill
+    restart: always
     environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/your-creds.json
-      # - HTTPS_PROXY=http://yourproxy:port  # Bỏ comment nếu bạn cần proxy
-    restart: unless-stopped
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bill_data
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backup.sh:/backup.sh
+    ports:
+      - "3306:3306"
+
+volumes:
+  mysql_data:

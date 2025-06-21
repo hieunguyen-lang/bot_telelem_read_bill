@@ -1,15 +1,18 @@
+
+import base64
+
+import json
+import re
+import threading
+import os
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 from telegram.ext import Updater, MessageHandler, Filters
 from telegram.ext import CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from io import BytesIO
-import base64
 from gemi_ai import GeminiBillAnalyzer
-import json
-import re
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-import threading
-import os
+from mysql_db_connector import MySQLConnector
 from dotenv import load_dotenv
 load_dotenv()  # Tự động tìm và load từ .env
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -30,6 +33,12 @@ creds = ServiceAccountCredentials.from_json_keyfile_name("your-creds.json", scop
 client = gspread.authorize(creds)
 print("🔑 GEMINI_API_KEY:", repr(GEMINI_API_KEY))
 analyzer = GeminiBillAnalyzer(api_key=GEMINI_API_KEY)
+db = MySQLConnector(
+    host="localhost",
+    user='root',
+    password=os.getenv("MYSQL_ROOT_PASSWORD"),
+    database=os.getenv("MYSQL_DATABASE")
+)
 media_group_storage = {}
 
 def validate_caption(update,chat_id, caption):
@@ -37,59 +46,102 @@ def validate_caption(update,chat_id, caption):
         return None, "❌ Không tìm thấy nội dung để xử lý. Vui lòng thêm caption cho ảnh."
 
     if str(chat_id) == GROUP_DAO_ID:
+        # ⚠️ Bắt buộc mỗi dòng đều phải có nháy ' hoặc "
+        required_keys = ['Khach', 'Sdt', 'Dao', 'Phi', 'TienPhi','RutThieu', 'Tong','LichCanhBao', 'Note']
+        for key in required_keys:
+            pattern = rf"{key}:\s*(['\"])(.+?)\1"
+            if not re.search(pattern, caption, re.IGNORECASE):
+                update.message.reply_text(
+                    "Vui lòng sửa lại caption theo đúng định dạng yêu cầu."
+                    "📌 Ví dụ:\n"
+                    "`Khach: 'Đặng Huỳnh Duyệt'`\n"
+                    "`Sdt: '0969963324'`\n"
+                    "`Dao: '19M990'`\n"
+                    "`Phi: '2%'`\n"
+                    "`TienPhi: '400K'`\n"
+                    "`RutThieu: '400K'`\n"
+                    "`Tong: '19M590'`\n"
+                    "`LichCanhBao: '21'`\n"
+                    "`Note: 'Chuyển khoản hộ em với'`",
+                    parse_mode="Markdown"
+                    )
+                return None, "None"
+            
         parsed = parse_message_dao(caption)
         if 'dao' not in parsed:
-            update.message.reply_text(
-                "❌ Đây là group Đáo, vui lòng chỉ gửi thông tin **Đáo** theo đúng định dạng sau:\n\n"
-                "🔹 *Khách:* Tên người đáo\n"
-                "🔹 *Sdt:* Số điện thoại\n"
-                "🔹 *Dao:* Số tiền đáo (ví dụ: 37tr710)\n"
-                "🔹 *Phi:* Phí phần trăm (ví dụ: 2%)\n"
-                "🔹 *TienPhi:* Số tiền phí (ví dụ: 750K)\n"
-                "🔹 *RutThieu:* Số tiền rút thiếu (ví dụ: 20K)\n"
-                "🔹 *Tong:* Tổng (ví dụ: 754K)\n"
-                "🔹 *LichCanhBao:* Số lịch cần báo\n"
-                "🔹 *Note:* Ghi chú thêm (nếu có)\n\n"
-                "📌 Ví dụ:\n"
-                "`Khach: Đặng Huỳnh Duyệt`\n"
-                "`Sdt: 0969963324`\n"
-                "`Dao: 37tr710`\n"
-                "`Phi: 2%`\n"
-                "`TienPhi: 750K`\n"
-                "`RutThieu: 20K`\n"
-                "`Tong: 754K`\n"
-                "`LichCanhBao: 21`\n"
-                "`Note: Chuyển khoản hộ em với`",
-                parse_mode="Markdown"
-            )
-            return None
-        return parsed, None
-
-    elif str(chat_id) == GROUP_RUT_ID:
-        parsed = parse_message_rut(caption)
-        if 'rut' not in parsed:
             update.message.reply_text(
                 "❌ Đây là group Rút, vui lòng chỉ gửi thông tin **rút tiền** theo đúng định dạng sau:\n\n"
                 "🔹 *Khách:* Tên người rút\n"
                 "🔹 *Sdt:* Số điện thoại\n"
-                "🔹 *Rut:* Số tiền rút (ví dụ: 19tr990)\n"
-                "🔹 *Phi:* Phí phần trăm (ví dụ: 2%)\n"
-                "🔹 *TienPhi:* Số tiền phí (ví dụ: 400k)\n"
-                "🔹 *ChuyenKhoan:* Số tiền chuyển khoản sau phí\n"
+                "🔹 *Dao:* Số tiền đáo (ví dụ: '19M990')\n"
+                "🔹 *Phi:* Phí phần trăm (ví dụ: '2%')\n"
+                "🔹 *TienPhi:* Số tiền phí (ví dụ: '400K')\n"
+                "🔹 *RutThieu:* Số tiền rút thiếu (ví dụ: '400K')\n"
+                "🔹 *Tong:* Tổng số tiền  (ví dụ: '19M590')\n"
                 "🔹 *LichCanhBao:* Số lịch cần báo\n"
                 "🔹 *Note:* Ghi chú thêm (nếu có)\n\n"
                 "📌 Ví dụ:\n"
-                "`Khach: Đặng Huỳnh Duyệt`\n"
-                "`Sdt: 0969963324`\n"
-                "`Rut: 19tr990`\n"
-                "`Phi: 2%`\n"
-                "`TienPhi: 400k`\n"
-                "`ChuyenKhoan: 19tr590`\n"
-                "`LichCanhBao: 21`\n"
-                "`Note: Chuyển khoản hộ em với`",
+                "`Khach: 'Đặng Huỳnh Duyệt'`\n"
+                "`Sdt: '0969963324'`\n"
+                "`Dao: '19M990'`\n"
+                "`Phi: '2%'`\n"
+                "`TienPhi: '400K'`\n"
+                "`RutThieu: '400K'`\n"
+                "`Tong: '19M590'`\n"
+                "`LichCanhBao: '21'`\n"
+                "`Note: 'Chuyển khoản hộ em với'`",
                 parse_mode="Markdown"
             )
-            return None
+            return None, "None"
+        return parsed, None
+
+    elif str(chat_id) == GROUP_RUT_ID:
+        # ⚠️ Bắt buộc mỗi dòng đều phải có nháy ' hoặc "
+        required_keys = ['Khach', 'Sdt', 'Rut', 'Phi', 'TienPhi', 'ChuyenKhoan','STK','LichCanhBao', 'Note']
+        for key in required_keys:
+            pattern = rf"{key}:\s*(['\"])(.+?)\1"
+            if not re.search(pattern, caption, re.IGNORECASE):
+                update.message.reply_text(
+                    "Vui lòng sửa lại caption theo đúng định dạng yêu cầu."
+                    "📌 Ví dụ:\n"
+                    "`Khach: 'Đặng Huỳnh Duyệt'`\n"
+                    "`Sdt: '0969963324'`\n"
+                    "`Rut: '19M990'`\n"
+                    "`Phi: '2%'`\n"
+                    "`TienPhi: '400K'`\n"
+                    "`ChuyenKhoan: '19M590'`\n"
+                    "`LichCanhBao: '21'`\n"
+                    "`STK: '868686 - EXIMBANK - BÙI VĂN KIÊN'`\n"
+                    "`Note: 'Chuyển khoản hộ em với'`",
+                    parse_mode="Markdown"
+                )
+                return None, "None"
+        parsed = parse_message_rut(caption)
+        if 'rut' not in parsed:
+            update.message.reply_text(
+            "❌ Đây là group Rút, vui lòng chỉ gửi thông tin **rút tiền** theo đúng định dạng sau:\n\n"
+            "🔹 *Khách:* Tên người rút\n"
+            "🔹 *Sdt:* Số điện thoại\n"
+            "🔹 *Rut:* Số tiền rút (ví dụ: '19M990')\n"
+            "🔹 *Phi:* Phí phần trăm (ví dụ: '2%')\n"
+            "🔹 *TienPhi:* Số tiền phí (ví dụ: '400K')\n"
+            "🔹 *ChuyenKhoan:* Số tiền chuyển khoản sau phí\n"
+            "🔹 *LichCanhBao:* Số lịch cần báo\n"
+            "🔹 *STK:* Số tài khoản\n"
+            "🔹 *Note:* Ghi chú thêm (nếu có)\n\n"
+            "📌 Ví dụ:\n"
+            "`Khach: 'Đặng Huỳnh Duyệt'`\n"
+            "`Sdt: '0969963324'`\n"
+            "`Rut: '19M990'`\n"
+            "`Phi: '2%'`\n"
+            "`TienPhi: '400K'`\n"
+            "`ChuyenKhoan: '19M590'`\n"
+            "`LichCanhBao: '21'`\n"
+            "`STK: '868686 - EXIMBANK - BÙI VĂN KIÊN'`\n"
+            "`Note: 'Chuyển khoản hộ em với'`",
+            parse_mode="Markdown"
+        )
+            return None, "None"
         return parsed, None
 
     return {}, None
@@ -113,7 +165,6 @@ def handle_photo(update, context):
     if message.media_group_id is None:
         parsed, error_msg = validate_caption(update,chat_id, message.caption)
         if error_msg:
-            update.message.reply_text(error_msg, parse_mode="Markdown")
             return
 
         context.user_data["image_data"] = [img_b64]
@@ -133,7 +184,6 @@ def handle_photo(update, context):
         # Ảnh đầu tiên của media group → parse caption luôn
         parsed, error_msg = validate_caption(update, chat_id, message.caption)
         if error_msg:
-            update.message.reply_text(error_msg, parse_mode="Markdown")
             return
 
         media_group_storage[media_group_id] = {
@@ -195,6 +245,15 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_DA
             row = [
                 timestamp,
                 full_name,
+                caption['khach'],
+                caption['sdt'],
+                caption['dao'],
+                caption['phi'],
+                caption['tien_phi'],
+                caption['rut_thieu'],
+                caption['tong'],
+                caption['lich_canh_bao'],
+                caption['note'],
                 result.get("ten_ngan_hang"),
                 result.get("ten_don_vi_ban"),
                 result.get("dia_chi_don_vi_ban"),
@@ -210,7 +269,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_DA
                 result.get("loai_giao_dich"),
                 message.caption or ""
             ]
-            
+            insert_bill_row_dao(db, row)  # Ghi vào MySQL
             # Xác định sheet theo ngân hàng
             if ten_ngan_hang == "MB":
                 sheet = spreadsheet.worksheet("MB Bank")
@@ -228,9 +287,13 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_DA
             # Lưu lại kết quả để in ra cuối
             res_mess.append(
                 f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
+                f"👤 {caption['khach']} - "
                 f"💰 {result.get('tong_so_tien') or '?'} {result.get('don_vi_tien_te') or ''} - "
-                f"{result.get('ngay_giao_dich')} {result.get('gio_giao_dich')}"
+                f"💳 {result.get('loai_the') or ''} - "
+                f"📄 {result.get('ma_giao_dich') or ''} - "
+                f"🧾 {result.get('so_lo') or ''}"
             )
+        db.close()
         if res_mess:
             reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
         else:
@@ -245,7 +308,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
     timestamp = message.date.strftime("%Y-%m-%d %H:%M:%S")
     image_b64_list = context.user_data.get("image_data", [])
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
-    print(caption['khach'])
+    print(caption)
 
     if selected_type == "bill":
         if not image_b64_list:
@@ -255,35 +318,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
 
         # Mở Google Sheet trước khi lặp
         spreadsheet = client.open_by_key(sheet_id)
-        colname = [
-            "Thời gian ghi nhận",        # timestamp
-            "Người gửi",                 # full_name
-            "Tên khách",                 # caption['khach']
-            "Số điện thoại",             # caption['sdt']
-            "Số tiền rút",               # caption['rut']
-            "Phần trăm phí",            # caption['phi']
-            "Số tiền phí",              # caption['tien_phi']
-            "Số tiền chuyển khoản",     # caption['chuyen_khoan']
-            "Lịch cảnh báo",            # caption['lich_canh_bao']
-            "Số tài khoản",             # caption['stk']
-            "Ghi chú",                  # caption['note']
-            "Ngân hàng",                # result["ten_ngan_hang"]
-            "Đơn vị bán hàng",          # result["ten_don_vi_ban"]
-            "Địa chỉ đơn vị",           # result["dia_chi_don_vi_ban"]
-            "Ngày giao dịch",           # result["ngay_giao_dich"]
-            "Giờ giao dịch",            # result["gio_giao_dich"]
-            "Tổng số tiền",             # result["tong_so_tien"]
-            "Đơn vị tiền tệ",           # result["don_vi_tien_te"]
-            "Loại thẻ",                 # result["loai_the"]
-            "Mã giao dịch",             # result["ma_giao_dich"]
-            "Mã đơn vị chấp nhận",      # result["ma_don_vi_chap_nhan"]
-            "Số lô",                    # result["so_lo"]
-            "Số tham chiếu",            # result["so_tham_chieu"]
-            "Loại giao dịch",           # result["loai_giao_dich"]
-            "Caption gốc"               # message.caption
-        ]
-        sheet1 = spreadsheet.worksheet("MB Bank")
-        sheet1.append_row(colname)
+        
         print(len(image_b64_list), "ảnh cần xử lý")
         for img_b64 in image_b64_list:
             result = analyzer.analyze_bill(img_b64)
@@ -320,7 +355,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 message.caption or ""
             ]
             
-            
+            insert_bill_row_rut(db, row)  # Ghi vào MySQL
             # Xác định sheet theo ngân hàng
             if ten_ngan_hang == "MB":
                 sheet = spreadsheet.worksheet("MB Bank")
@@ -338,9 +373,13 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             # Lưu lại kết quả để in ra cuối
             res_mess.append(
                 f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
+                f"👤 {caption['khach']} - "
                 f"💰 {result.get('tong_so_tien') or '?'} {result.get('don_vi_tien_te') or ''} - "
-                f"{result.get('ngay_giao_dich')} {result.get('gio_giao_dich')}"
+                f"💳 {result.get('loai_the') or ''} - "
+                f"📄 {result.get('ma_giao_dich') or ''} - "
+                f"🧾 {result.get('so_lo') or ''}"
             )
+        db.close()
         if res_mess:
             reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
         else:
@@ -348,20 +387,84 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
 
         message.reply_text(reply_msg)
 
+
+def insert_bill_row_rut(db, row):
+    query = """
+        INSERT INTO thong_tin_hoa_don_rut (
+            thoi_gian,
+            nguoi_gui,
+            ten_khach,
+            so_dien_thoai,
+            so_tien_rut,
+            phan_tram_phi,
+            so_tien_phi,
+            so_tien_chuyen_khoan,
+            lich_canh_bao,
+            so_tai_khoan,
+            ghi_chu,
+            ngan_hang,
+            don_vi_ban,
+            dia_chi_don_vi,
+            ngay_giao_dich,
+            gio_giao_dich,
+            tong_so_tien,
+            don_vi_tien_te,
+            loai_the,
+            ma_giao_dich,
+            ma_don_vi_chap_nhan,
+            so_lo,
+            so_tham_chieu,
+            loai_giao_dich,
+            caption_goc
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    db.execute(query, row)
+def insert_bill_row_dao(db, row):
+    query = """
+        INSERT INTO thong_tin_hoa_don_dao (
+            thoi_gian,
+            nguoi_gui,
+            ten_khach,
+            so_dien_thoai,
+            so_tien_dao,
+            phan_tram_phi,
+            so_tien_phi,
+            so_tien_rut_thieu,
+            tong,
+            lich_canh_bao,
+            ghi_chu,
+            ngan_hang,
+            don_vi_ban,
+            dia_chi_don_vi,
+            ngay_giao_dich,
+            gio_giao_dich,
+            tong_so_tien,
+            don_vi_tien_te,
+            loai_the,
+            ma_giao_dich,
+            ma_don_vi_chap_nhan,
+            so_lo,
+            so_tham_chieu,
+            loai_giao_dich,
+            caption_goc
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    db.execute(query, row)
+
 def parse_message_rut(text):
     data = {}
     if not text:
         return None
     patterns = {
-        "khach": r"Khach:\s*(.+)",
-        "sdt": r"SDT:\s*(\d+)",
-        "rut": r"RUT:\s*([\d.]+[MK]?)",
-        "phi": r"Phi:\s*([\d.]+%)",
-        "tien_phi": r"(?:DienPhi|TienPhi):\s*([\d.]+[MK]?)",
-        "chuyen_khoan": r"Chuyenkhoan:\s*([\d.]+[MK]?)",
-        "lich_canh_bao": r"LichCanhBao:\s*(\d+)",
-        "stk": r"STK:\s*(.+)",
-        "note": r"Note:\s*(.+)"
+        "khach": r"Khach:\s*['\"](.+?)['\"]",
+        "sdt": r"Sdt:\s*['\"](\d+)['\"]",
+        "rut": r"Rut:\s*['\"](.+?)['\"]",
+        "phi": r"Phi:\s*['\"]([\d.]+%)['\"]",
+        "tien_phi": r"(?:TienPhi|DienPhi):\s*['\"](.+?)['\"]",
+        "chuyen_khoan": r"Chuyenkhoan:\s*['\"](.+?)['\"]",
+        "lich_canh_bao": r"LichCanhBao:\s*['\"]?(\d+)['\"]?",
+        "stk": r"STK:\s*['\"](.+?)['\"]",
+        "note": r"Note:\s*['\"](.+?)['\"]"
     }
 
     for key, pattern in patterns.items():
@@ -382,15 +485,15 @@ def parse_message_dao(text):
     if not text:
         return None
     patterns = {
-        "khach": r"Khach:\s*(.+)",
-        "sdt": r"SDT:\s*(\d+)",
-        "dao": r"Dao:\s*([\d.]+[MK]?)",
-        "phi": r"Phi:\s*([\d.]+%)",
-        "tien_phi": r"TienPhi:\s*([\d.]+%)",
-        "rut_thieu": r"RutThieu:\s*([\d.]+[MK]?)",
-        "tong": r"Tong:\s*([\d.]+[MK]?)",
-        "lich_canh_bao": r"LichCanhBao:\s*(\d+)",
-        "note": r"Note:\s*(.+)"
+        "khach": r"Khach:\s*['\"]?(.+?)['\"]?(?:\n|$)",
+        "sdt": r"Sdt:\s*['\"]?(\d{9,11})['\"]?(?:\n|$)",
+        "dao": r"Dao:\s*['\"]?([\d.,a-zA-Z ]+)['\"]?(?:\n|$)",
+        "phi": r"Phi:\s*['\"]?([\d.]+%)['\"]?(?:\n|$)",
+        "tien_phi": r"TienPhi:\s*['\"]?([\d.,a-zA-Z ]+)['\"]?(?:\n|$)",
+        "rut_thieu": r"RutThieu:\s*['\"]?([\d.,a-zA-Z ]+)['\"]?(?:\n|$)",
+        "tong": r"Tong:\s*['\"]?([\d.,a-zA-Z ]+)['\"]?(?:\n|$)",
+        "lich_canh_bao": r"LichCanhBao:\s*['\"]?(\d+)['\"]?(?:\n|$)",
+        "note": r"Note:\s*['\"]?(.+?)['\"]?(?:\n|$)"
     }
 
     for key, pattern in patterns.items():
@@ -413,8 +516,6 @@ updater = Updater(
 dp = updater.dispatcher
 # Thứ tự rất quan trọng: handler kiểm tra group phải đứng trước
 dp.add_handler(MessageHandler(Filters.photo, handle_photo))
-
-
 updater.start_polling()
 updater.idle()
 
