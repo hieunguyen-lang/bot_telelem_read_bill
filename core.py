@@ -31,32 +31,14 @@ client = gspread.authorize(creds)
 print("🔑 GEMINI_API_KEY:", repr(GEMINI_API_KEY))
 analyzer = GeminiBillAnalyzer(api_key=GEMINI_API_KEY)
 media_group_storage = {}
-def handle_photo(update, context):
-    chat_id = update.effective_chat.id
-    chat_title = update.effective_chat.title
-    print(f"Ảnh gửi từ group {chat_title} (ID: {chat_id})")
-    message = update.message
-    media_group_id = message.media_group_id or f"single_{message.message_id}"
-    user_id = message.from_user.id
 
-    # Tải ảnh trước (phải làm trước khi xử lý ảnh đơn)
-    file = message.photo[-1].get_file()
-    bio = BytesIO()
-    file.download(out=bio)
-    img_b64 = base64.b64encode(bio.getvalue()).decode("utf-8")
+def validate_caption(update,chat_id, caption):
+    if not caption:
+        return None, "❌ Không tìm thấy nội dung để xử lý. Vui lòng thêm caption cho ảnh."
+
     if str(chat_id) == GROUP_DAO_ID:
-        # xử lý riêng cho group A
-            # Khach: Khưu Tông Diệu  
-            # SDT: 0373179999  
-            # Dao: 37.710M  
-            # Phi: 2%  
-            # TienPhi: 750K  
-            # RutThieu: 20K  
-            # Tong: 754K  
-            # LichCanhBao: 21
-        print("Đây là group Đáo")
-        mess_json = parse_message_dao(message.caption)
-        if 'dao' not in mess_json:
+        parsed = parse_message_dao(caption)
+        if 'dao' not in parsed:
             update.message.reply_text(
                 "❌ Đây là group Đáo, vui lòng chỉ gửi thông tin **Đáo** theo đúng định dạng sau:\n\n"
                 "🔹 *Khách:* Tên người đáo\n"
@@ -76,23 +58,16 @@ def handle_photo(update, context):
                 "`TienPhi: 750K`\n"
                 "`RutThieu: 20K`\n"
                 "`Tong: 754K`\n"
-                "`LichCanhBao: 21`",
+                "`LichCanhBao: 21`\n"
                 "`Note: Chuyển khoản hộ em với`",
                 parse_mode="Markdown"
             )
-            return  
+            return None
+        return parsed, None
+
     elif str(chat_id) == GROUP_RUT_ID:
-        # xử lý riêng cho group Rút
-            # Khách: Đặng Huỳnh Duyệt 
-            # Sdt: 0969963324
-            # Rut: 19tr990 
-            # Phi: 2%
-            # TienPhi: 400k
-            # ChuyenKhoan: 19tr590
-            # LichCanhBao: 21
-        print("Đây là group Rút")
-        mess_json = parse_message_rut(message.caption)
-        if 'rut' not in mess_json:
+        parsed = parse_message_rut(caption)
+        if 'rut' not in parsed:
             update.message.reply_text(
                 "❌ Đây là group Rút, vui lòng chỉ gửi thông tin **rút tiền** theo đúng định dạng sau:\n\n"
                 "🔹 *Khách:* Tên người rút\n"
@@ -110,63 +85,87 @@ def handle_photo(update, context):
                 "`Phi: 2%`\n"
                 "`TienPhi: 400k`\n"
                 "`ChuyenKhoan: 19tr590`\n"
-                "`LichCanhBao: 21`",
+                "`LichCanhBao: 21`\n"
                 "`Note: Chuyển khoản hộ em với`",
                 parse_mode="Markdown"
             )
+            return None
+        return parsed, None
 
-            return   
+    return {}, None
+
+def handle_photo(update, context):
+    chat_id = update.effective_chat.id
+    chat_title = update.effective_chat.title
+    print(f"Ảnh gửi từ group {chat_title} (ID: {chat_id})")
+    message = update.message
+    media_group_id = message.media_group_id or f"single_{message.message_id}"
+    user_id = message.from_user.id
+
+    # Tải ảnh trước (phải làm trước khi xử lý ảnh đơn)
+    file = message.photo[-1].get_file()
+    bio = BytesIO()
+    file.download(out=bio)
+    img_b64 = base64.b64encode(bio.getvalue()).decode("utf-8")
+    
     
     # 👉 Ảnh đơn → gán trực tiếp thành list
     if message.media_group_id is None:
+        parsed, error_msg = validate_caption(update,chat_id, message.caption)
+        if error_msg:
+            update.message.reply_text(error_msg, parse_mode="Markdown")
+            return
+
         context.user_data["image_data"] = [img_b64]
-        context.user_data["caption"] = message.caption or ""
+        context.user_data["caption"] = parsed
         # Gọi xử lý luôn (giả sử luôn là hóa đơn)
         if str(chat_id) == GROUP_DAO_ID:
-            
-            print("Đây là group Đáo")
+           
             handle_selection_dao(update, context, selected_type="bill")
+            
         elif str(chat_id) == GROUP_RUT_ID:
-            
-            print("Đây là group Rút")
+        
             handle_selection_rut(update, context, selected_type="bill")
-            
 
         return
     
-    # 👉 Nếu là media group → gom lại
     if media_group_id not in media_group_storage:
+        # Ảnh đầu tiên của media group → parse caption luôn
+        parsed, error_msg = validate_caption(update, chat_id, message.caption)
+        if error_msg:
+            update.message.reply_text(error_msg, parse_mode="Markdown")
+            return
+
         media_group_storage[media_group_id] = {
-            "images": [],
+            "images": [img_b64],
             "timer": None,
             "user_id": user_id,
             "context": context,
-            "caption": ""  # 👈 thêm dòng này
+            "caption": parsed
         }
-
-        # Gán caption nếu có (và chỉ lấy 1 lần, thường ảnh đầu tiên trong media group có caption)
-        if not media_group_storage[media_group_id]["caption"] and message.caption:
-            media_group_storage[media_group_id]["caption"] = message.caption
-
-        # Lưu vào danh sách
+    else:
+        # Các ảnh tiếp theo → chỉ cần thêm ảnh
         media_group_storage[media_group_id]["images"].append(img_b64)
-        # Tạo timer mới để chờ ảnh tiếp theo trong media group (1 giây)
-        def process_media_group():
-            context.user_data["image_data"] = media_group_storage[media_group_id]["images"]
-            context.user_data["caption"] = media_group_storage[media_group_id]["caption"]
-            del media_group_storage[media_group_id]
-            if str(chat_id) == GROUP_DAO_ID:
-                # xử lý riêng cho group A
-                print("Đây là group Đáo")
-                handle_selection_dao(update, context, selected_type="bill")
-            elif str(chat_id) == GROUP_RUT_ID:
-                # xử lý riêng cho group Rút
-                print("Đây là group Rút")
-                handle_selection_rut(update, context, selected_type="bill")
 
-        timer = threading.Timer(3.0, process_media_group)
-        media_group_storage[media_group_id]["timer"] = timer
-        timer.start()
+    # ✅ Dù là ảnh đầu hay tiếp theo → luôn reset lại timer
+    if media_group_storage[media_group_id]["timer"]:
+        media_group_storage[media_group_id]["timer"].cancel()
+
+    def process_media_group():
+        context.user_data["image_data"] = media_group_storage[media_group_id]["images"]
+        context.user_data["caption"] = media_group_storage[media_group_id]["caption"]
+        del media_group_storage[media_group_id]
+        if str(chat_id) == GROUP_DAO_ID:
+            print("Đây là group Đáo")
+            handle_selection_dao(update, context, selected_type="bill")
+        elif str(chat_id) == GROUP_RUT_ID:
+            print("Đây là group Rút")
+            handle_selection_rut(update, context, selected_type="bill")
+
+    timer = threading.Timer(3.0, process_media_group)
+    media_group_storage[media_group_id]["timer"] = timer
+    timer.start()
+
 
 def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_DAO_ID):
     message = update.message
@@ -179,9 +178,9 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_DA
 
     if selected_type == "bill":
         if not image_b64_list:
-            message.edit_text("❌ Không tìm thấy ảnh nào để xử lý.")
+            message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
             return
-        results = []  # Để lưu kết quả trả về từ từng ảnh
+        res_mess = []  # Để lưu kết quả trả về từ từng ảnh
 
         # Mở Google Sheet trước khi lặp
         spreadsheet = client.open_by_key(sheet_id)
@@ -191,20 +190,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_DA
             if result is None:
                 continue
 
-            result = analyzer.analyze_bill(img_b64)
             ten_ngan_hang = result.get("ten_ngan_hang")
-            # ten_don_vi_ban = result.get("ten_don_vi_ban")
-            # dia_chi_don_vi_ban = result.get("dia_chi_don_vi_ban")
-            # ngay_giao_dich = result.get("ngay_giao_dich")
-            # gio_giao_dich = result.get("gio_giao_dich")
-            # tong_so_tien = result.get("tong_so_tien")
-            # don_vi_tien_te = result.get("don_vi_tien_te")
-            # loai_the = result.get("loai_the")
-            # ma_giao_dich = result.get("ma_giao_dich")
-            # ma_don_vi_chap_nhan = result.get("ma_don_vi_chap_nhan")
-            # so_lo = result.get("so_lo")
-            # so_tham_chieu = result.get("so_tham_chieu")
-            # loai_giao_dich = result.get("loai_giao_dich")
 
             row = [
                 timestamp,
@@ -224,14 +210,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_DA
                 result.get("loai_giao_dich"),
                 message.caption or ""
             ]
-            # Lưu lại kết quả để in ra cuối
-            results.append(
-                f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
-                f"💰 {result.get('tong_so_tien') or '?'} {result.get('don_vi_tien_te') or ''} - "
-                f"{result.get('ngay_giao_dich')} {result.get('gio_giao_dich')}"
-            )
-            # Mở file bằng ID
-            spreadsheet = client.open_by_key("1dq-Y9Ns3nH3Exbv4BvgzUMdsnO3APEwxj72eAM-GstI")
+            
             # Xác định sheet theo ngân hàng
             if ten_ngan_hang == "MB":
                 sheet = spreadsheet.worksheet("MB Bank")
@@ -246,12 +225,18 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_DA
 
             # Ghi dữ liệu
             sheet.append_row(row)
-            if results:
-                reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(results)
-            else:
-                reply_msg = "⚠️ Không xử lý được hóa đơn nào."
+            # Lưu lại kết quả để in ra cuối
+            res_mess.append(
+                f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
+                f"💰 {result.get('tong_so_tien') or '?'} {result.get('don_vi_tien_te') or ''} - "
+                f"{result.get('ngay_giao_dich')} {result.get('gio_giao_dich')}"
+            )
+        if res_mess:
+            reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+        else:
+            reply_msg = "⚠️ Không xử lý được hóa đơn nào."
 
-            message.edit_text(reply_msg)
+        message.reply_text(reply_msg)
 
 
 def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
@@ -260,40 +245,65 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
     timestamp = message.date.strftime("%Y-%m-%d %H:%M:%S")
     image_b64_list = context.user_data.get("image_data", [])
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
-
+    print(caption['khach'])
 
     if selected_type == "bill":
         if not image_b64_list:
-            message.edit_text("❌ Không tìm thấy ảnh nào để xử lý.")
+            message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
             return
-        results = []  # Để lưu kết quả trả về từ từng ảnh
+        res_mess = []  # Để lưu kết quả trả về từ từng ảnh
 
         # Mở Google Sheet trước khi lặp
         spreadsheet = client.open_by_key(sheet_id)
-
+        colname = [
+            "Thời gian ghi nhận",        # timestamp
+            "Người gửi",                 # full_name
+            "Tên khách",                 # caption['khach']
+            "Số điện thoại",             # caption['sdt']
+            "Số tiền rút",               # caption['rut']
+            "Phần trăm phí",            # caption['phi']
+            "Số tiền phí",              # caption['tien_phi']
+            "Số tiền chuyển khoản",     # caption['chuyen_khoan']
+            "Lịch cảnh báo",            # caption['lich_canh_bao']
+            "Số tài khoản",             # caption['stk']
+            "Ghi chú",                  # caption['note']
+            "Ngân hàng",                # result["ten_ngan_hang"]
+            "Đơn vị bán hàng",          # result["ten_don_vi_ban"]
+            "Địa chỉ đơn vị",           # result["dia_chi_don_vi_ban"]
+            "Ngày giao dịch",           # result["ngay_giao_dich"]
+            "Giờ giao dịch",            # result["gio_giao_dich"]
+            "Tổng số tiền",             # result["tong_so_tien"]
+            "Đơn vị tiền tệ",           # result["don_vi_tien_te"]
+            "Loại thẻ",                 # result["loai_the"]
+            "Mã giao dịch",             # result["ma_giao_dich"]
+            "Mã đơn vị chấp nhận",      # result["ma_don_vi_chap_nhan"]
+            "Số lô",                    # result["so_lo"]
+            "Số tham chiếu",            # result["so_tham_chieu"]
+            "Loại giao dịch",           # result["loai_giao_dich"]
+            "Caption gốc"               # message.caption
+        ]
+        sheet1 = spreadsheet.worksheet("MB Bank")
+        sheet1.append_row(colname)
+        print(len(image_b64_list), "ảnh cần xử lý")
         for img_b64 in image_b64_list:
             result = analyzer.analyze_bill(img_b64)
             if result is None:
                 continue
-
-            result = analyzer.analyze_bill(img_b64)
             ten_ngan_hang = result.get("ten_ngan_hang")
-            # ten_don_vi_ban = result.get("ten_don_vi_ban")
-            # dia_chi_don_vi_ban = result.get("dia_chi_don_vi_ban")
-            # ngay_giao_dich = result.get("ngay_giao_dich")
-            # gio_giao_dich = result.get("gio_giao_dich")
-            # tong_so_tien = result.get("tong_so_tien")
-            # don_vi_tien_te = result.get("don_vi_tien_te")
-            # loai_the = result.get("loai_the")
-            # ma_giao_dich = result.get("ma_giao_dich")
-            # ma_don_vi_chap_nhan = result.get("ma_don_vi_chap_nhan")
-            # so_lo = result.get("so_lo")
-            # so_tham_chieu = result.get("so_tham_chieu")
-            # loai_giao_dich = result.get("loai_giao_dich")
+
 
             row = [
                 timestamp,
                 full_name,
+                caption['khach'],
+                caption['sdt'],
+                caption['rut'],
+                caption['phi'],
+                caption['tien_phi'],
+                caption['chuyen_khoan'],
+                caption['lich_canh_bao'],
+                caption['stk'],
+                caption['note'],
                 result.get("ten_ngan_hang"),
                 result.get("ten_don_vi_ban"),
                 result.get("dia_chi_don_vi_ban"),
@@ -309,14 +319,8 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("loai_giao_dich"),
                 message.caption or ""
             ]
-            # Lưu lại kết quả để in ra cuối
-            results.append(
-                f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
-                f"💰 {result.get('tong_so_tien') or '?'} {result.get('don_vi_tien_te') or ''} - "
-                f"{result.get('ngay_giao_dich')} {result.get('gio_giao_dich')}"
-            )
-            # Mở file bằng ID
-            spreadsheet = client.open_by_key("1dq-Y9Ns3nH3Exbv4BvgzUMdsnO3APEwxj72eAM-GstI")
+            
+            
             # Xác định sheet theo ngân hàng
             if ten_ngan_hang == "MB":
                 sheet = spreadsheet.worksheet("MB Bank")
@@ -331,16 +335,23 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
 
             # Ghi dữ liệu
             sheet.append_row(row)
-            if results:
-                reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(results)
-            else:
-                reply_msg = "⚠️ Không xử lý được hóa đơn nào."
+            # Lưu lại kết quả để in ra cuối
+            res_mess.append(
+                f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
+                f"💰 {result.get('tong_so_tien') or '?'} {result.get('don_vi_tien_te') or ''} - "
+                f"{result.get('ngay_giao_dich')} {result.get('gio_giao_dich')}"
+            )
+        if res_mess:
+            reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+        else:
+            reply_msg = "⚠️ Không xử lý được hóa đơn nào."
 
-            message.edit_text(reply_msg)
+        message.reply_text(reply_msg)
 
 def parse_message_rut(text):
     data = {}
-
+    if not text:
+        return None
     patterns = {
         "khach": r"Khach:\s*(.+)",
         "sdt": r"SDT:\s*(\d+)",
@@ -368,7 +379,8 @@ def parse_message_rut(text):
 
 def parse_message_dao(text):
     data = {}
-
+    if not text:
+        return None
     patterns = {
         "khach": r"Khach:\s*(.+)",
         "sdt": r"SDT:\s*(\d+)",
