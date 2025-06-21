@@ -1,8 +1,9 @@
 from telegram.ext import Updater
 from handlers.photo_handler import register_photo_handler
-from handlers.menu_handler import register_menu_handlers
+from handlers.menu_handler import register_menu_handlers 
 import os
-
+from dotenv import load_dotenv
+load_dotenv()  # Tự động tìm và load từ .env
 updater = Updater(
     token=os.getenv("TELEGRAM_TOKEN"),
     request_kwargs={'proxy_url': os.getenv("PROXY_URL")}

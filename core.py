@@ -508,14 +508,14 @@ def parse_message_dao(text):
 
     return data
 
-updater = Updater(
-    token=TELEGRAM_TOKEN,
-    request_kwargs={'proxy_url': PROXY_URL}
-)
+# updater = Updater(
+#     token=TELEGRAM_TOKEN,
+#     request_kwargs={'proxy_url': PROXY_URL}
+# )
 
-dp = updater.dispatcher
-# Thứ tự rất quan trọng: handler kiểm tra group phải đứng trước
-dp.add_handler(MessageHandler(Filters.photo, handle_photo))
-updater.start_polling()
-updater.idle()
+# dp = updater.dispatcher
+# # Thứ tự rất quan trọng: handler kiểm tra group phải đứng trước
+# dp.add_handler(MessageHandler(Filters.photo, handle_photo))
+# updater.start_polling()
+# updater.idle()
 
