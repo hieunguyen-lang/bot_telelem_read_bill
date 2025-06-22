@@ -49,20 +49,20 @@ def validate_caption(update,chat_id, caption):
         # ⚠️ Bắt buộc mỗi dòng đều phải có nháy ' hoặc "
         required_keys = ['Khach', 'Sdt', 'Dao', 'Phi', 'TienPhi','RutThieu', 'Tong','LichCanhBao', 'Note']
         for key in required_keys:
-            pattern = rf"{key}:\s*(['\"])(.+?)\1"
+            pattern = rf"{key}:\s*(?:['\"])?(.+?)(?:['\"])?(?:\n|$)"
             if not re.search(pattern, caption, re.IGNORECASE):
                 update.message.reply_text(
                     "Vui lòng sửa lại caption theo đúng định dạng yêu cầu."
                     "📌 Ví dụ:\n"
-                    "`Khach: 'Đặng Huỳnh Duyệt'`\n"
-                    "`Sdt: '0969963324'`\n"
-                    "`Dao: '19M990'`\n"
-                    "`Phi: '2%'`\n"
-                    "`TienPhi: '400K'`\n"
-                    "`RutThieu: '400K'`\n"
-                    "`Tong: '19M590'`\n"
-                    "`LichCanhBao: '21'`\n"
-                    "`Note: 'Chuyển khoản hộ em với'`",
+                    "`Khach: {Đặng Huỳnh Duyệt}`\n"
+                    "`Sdt: {0969963324}`\n"
+                    "`Dao: {19M990}`\n"
+                    "`Phi: {2%}`\n"
+                    "`TienPhi: {400K}`\n"
+                    "`RutThieu: {400K}`\n"
+                    "`Tong: {19M590}`\n"
+                    "`LichCanhBao: {21}`\n"
+                    "`Note: {Chuyển khoản hộ em với}`",
                     parse_mode="Markdown"
                     )
                 return None, "None"
@@ -81,15 +81,15 @@ def validate_caption(update,chat_id, caption):
                 "🔹 *LichCanhBao:* Số lịch cần báo\n"
                 "🔹 *Note:* Ghi chú thêm (nếu có)\n\n"
                 "📌 Ví dụ:\n"
-                "`Khach: 'Đặng Huỳnh Duyệt'`\n"
-                "`Sdt: '0969963324'`\n"
-                "`Dao: '19M990'`\n"
-                "`Phi: '2%'`\n"
-                "`TienPhi: '400K'`\n"
-                "`RutThieu: '400K'`\n"
-                "`Tong: '19M590'`\n"
-                "`LichCanhBao: '21'`\n"
-                "`Note: 'Chuyển khoản hộ em với'`",
+                "`Khach: {Đặng Huỳnh Duyệt}`\n"
+                "`Sdt: {0969963324}`\n"
+                "`Dao: {19M990}`\n"
+                "`Phi: {2%}`\n"
+                "`TienPhi: {400K}`\n"
+                "`RutThieu: {400K}`\n"
+                "`Tong: {19M590}`\n"
+                "`LichCanhBao: {21}`\n"
+                "`Note: {Chuyển khoản hộ em với}`",
                 parse_mode="Markdown"
             )
             return None, "None"
@@ -97,22 +97,22 @@ def validate_caption(update,chat_id, caption):
 
     elif str(chat_id) == GROUP_RUT_ID:
         # ⚠️ Bắt buộc mỗi dòng đều phải có nháy ' hoặc "
-        required_keys = ['Khach', 'Sdt', 'Rut', 'Phi', 'TienPhi', 'ChuyenKhoan','STK','LichCanhBao', 'Note']
+        required_keys = ['Khach', 'Sdt', 'Rut', 'Phi', 'TienPhi', 'ChuyenKhoan','LichCanhBao', 'Note']
         for key in required_keys:
-            pattern = rf"{key}:\s*(['\"])(.+?)\1"
+            pattern = rf"{key}:\s*(?:['\"])?(.+?)(?:['\"])?(?:\n|$)"
             if not re.search(pattern, caption, re.IGNORECASE):
                 update.message.reply_text(
                     "Vui lòng sửa lại caption theo đúng định dạng yêu cầu."
                     "📌 Ví dụ:\n"
-                    "`Khach: 'Đặng Huỳnh Duyệt'`\n"
-                    "`Sdt: '0969963324'`\n"
-                    "`Rut: '19M990'`\n"
-                    "`Phi: '2%'`\n"
-                    "`TienPhi: '400K'`\n"
-                    "`ChuyenKhoan: '19M590'`\n"
-                    "`LichCanhBao: '21'`\n"
-                    "`STK: '868686 - EXIMBANK - BÙI VĂN KIÊN'`\n"
-                    "`Note: 'Chuyển khoản hộ em với'`",
+                    "`Khach: {Đặng Huỳnh Duyệt}`\n"
+                    "`Sdt: {0969963324}`\n"
+                    "`Rut: {19M990}`\n"
+                    "`Phi: {2%}`\n"
+                    "`TienPhi: {400K}`\n"
+                    "`ChuyenKhoan: {19M590}`\n"
+                    "`LichCanhBao: {21}`\n"
+                    "`STK: 868686 - EXIMBANK - BÙI VĂN KIÊN`\n"
+                    "`Note: {Chuyển khoản hộ em với}`",
                     parse_mode="Markdown"
                 )
                 return None, "None"
@@ -455,16 +455,17 @@ def parse_message_rut(text):
     data = {}
     if not text:
         return None
+
     patterns = {
-        "khach": r"Khach:\s*['\"](.+?)['\"]",
-        "sdt": r"Sdt:\s*['\"](\d+)['\"]",
-        "rut": r"Rut:\s*['\"](.+?)['\"]",
-        "phi": r"Phi:\s*['\"]([\d.]+%)['\"]",
-        "tien_phi": r"(?:TienPhi|DienPhi):\s*['\"](.+?)['\"]",
-        "chuyen_khoan": r"Chuyenkhoan:\s*['\"](.+?)['\"]",
-        "lich_canh_bao": r"LichCanhBao:\s*['\"]?(\d+)['\"]?",
-        "stk": r"STK:\s*['\"](.+?)['\"]",
-        "note": r"Note:\s*['\"](.+?)['\"]"
+        "khach": r"Khach:\s*\{(.+?)\}",
+        "sdt": r"Sdt:\s*\{(\d{9,11})\}",
+        "rut": r"Rut:\s*\{(.+?)\}",
+        "phi": r"Phi:\s*\{([\d.]+%)\}",
+        "tien_phi": r"(?:TienPhi|DienPhi):\s*\{(.+?)\}",
+        "chuyen_khoan": r"ChuyenKhoan:\s*\{(.+?)\}",
+        "lich_canh_bao": r"LichCanhBao:\s*\{(\d+)\}",
+        "stk": r"STK:\s*(?:\{)?(.+?)(?:\})?(?:\n|$)",
+        "note": r"Note:\s*\{(.+?)\}"
     }
 
     for key, pattern in patterns.items():
@@ -472,9 +473,9 @@ def parse_message_rut(text):
         if match:
             data[key] = match.group(1).strip()
 
-    # Nếu không có Note nhưng có dòng ghi chú cuối cùng → gán vào 'note'
+    # Nếu không có note mà dòng cuối có thể là ghi chú
     last_line = text.strip().split('\n')[-1]
-    if 'note' not in data and not any(k in last_line for k in ['Khach:', 'STK:', 'Chuyenkhoan:']):
+    if 'note' not in data and not any(k.lower() in last_line.lower() for k in ['khach:', 'stk:', 'chuyenkhoan:', '{']):
         data['note'] = last_line.strip()
 
     return data
@@ -484,16 +485,18 @@ def parse_message_dao(text):
     data = {}
     if not text:
         return None
+
+    # Các pattern tương ứng với định dạng: Trường: {giá trị}
     patterns = {
-        "khach": r"Khach:\s*['\"]?(.+?)['\"]?(?:\n|$)",
-        "sdt": r"Sdt:\s*['\"]?(\d{9,11})['\"]?(?:\n|$)",
-        "dao": r"Dao:\s*['\"]?([\d.,a-zA-Z ]+)['\"]?(?:\n|$)",
-        "phi": r"Phi:\s*['\"]?([\d.]+%)['\"]?(?:\n|$)",
-        "tien_phi": r"TienPhi:\s*['\"]?([\d.,a-zA-Z ]+)['\"]?(?:\n|$)",
-        "rut_thieu": r"RutThieu:\s*['\"]?([\d.,a-zA-Z ]+)['\"]?(?:\n|$)",
-        "tong": r"Tong:\s*['\"]?([\d.,a-zA-Z ]+)['\"]?(?:\n|$)",
-        "lich_canh_bao": r"LichCanhBao:\s*['\"]?(\d+)['\"]?(?:\n|$)",
-        "note": r"Note:\s*['\"]?(.+?)['\"]?(?:\n|$)"
+        "khach": r"Khach:\s*\{(.+?)\}",
+        "sdt": r"Sdt:\s*\{(\d{9,11})\}",
+        "dao": r"Dao:\s*\{([\d.,a-zA-Z ]+)\}",
+        "phi": r"Phi:\s*\{([\d.]+%)\}",
+        "tien_phi": r"TienPhi:\s*\{([\d.,a-zA-Z ]+)\}",
+        "rut_thieu": r"RutThieu:\s*\{([\d.,a-zA-Z ]+)\}",
+        "tong": r"Tong:\s*\{([\d.,a-zA-Z ]+)\}",
+        "lich_canh_bao": r"LichCanhBao:\s*\{(\d+)\}",
+        "note": r"Note:\s*\{(.+?)\}"
     }
 
     for key, pattern in patterns.items():
@@ -501,9 +504,9 @@ def parse_message_dao(text):
         if match:
             data[key] = match.group(1).strip()
 
-    # Nếu không có Note nhưng có dòng ghi chú cuối cùng → gán vào 'note'
+    # Nếu không có note mà dòng cuối là ghi chú thì gán
     last_line = text.strip().split('\n')[-1]
-    if 'note' not in data and not any(k in last_line for k in ['Khach:', 'STK:', 'Chuyenkhoan:']):
+    if 'note' not in data and not any(k in last_line.lower() for k in ['khach:', 'stk:', 'chuyenkhoan:', '{']):
         data['note'] = last_line.strip()
 
     return data
