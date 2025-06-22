@@ -47,7 +47,7 @@ def validate_caption(update,chat_id, caption):
 
     if str(chat_id) == GROUP_DAO_ID:
         # ⚠️ Bắt buộc mỗi dòng đều phải có nháy ' hoặc "
-        required_keys = ['Khach', 'Sdt', 'Dao', 'Phi', 'TienPhi','RutThieu', 'Tong','LichCanhBao', 'Note']
+        required_keys = ['Khach', 'Sdt', 'Dao', 'Phi', 'TienPhi','Tong','LichCanhBao']
         for key in required_keys:
             pattern = rf"{key}:\s*(?:['\"])?(.+?)(?:['\"])?(?:\n|$)"
             if not re.search(pattern, caption, re.IGNORECASE):
@@ -59,7 +59,6 @@ def validate_caption(update,chat_id, caption):
                     "`Dao: {19M990}`\n"
                     "`Phi: {2%}`\n"
                     "`TienPhi: {400K}`\n"
-                    "`RutThieu: {400K}`\n"
                     "`Tong: {19M590}`\n"
                     "`LichCanhBao: {21}`\n"
                     "`Note: {Chuyển khoản hộ em với}`",
@@ -70,34 +69,24 @@ def validate_caption(update,chat_id, caption):
         parsed = parse_message_dao(caption)
         if 'dao' not in parsed:
             update.message.reply_text(
-                "❌ Đây là group Rút, vui lòng chỉ gửi thông tin **rút tiền** theo đúng định dạng sau:\n\n"
-                "🔹 *Khách:* Tên người rút\n"
-                "🔹 *Sdt:* Số điện thoại\n"
-                "🔹 *Dao:* Số tiền đáo (ví dụ: '19M990')\n"
-                "🔹 *Phi:* Phí phần trăm (ví dụ: '2%')\n"
-                "🔹 *TienPhi:* Số tiền phí (ví dụ: '400K')\n"
-                "🔹 *RutThieu:* Số tiền rút thiếu (ví dụ: '400K')\n"
-                "🔹 *Tong:* Tổng số tiền  (ví dụ: '19M590')\n"
-                "🔹 *LichCanhBao:* Số lịch cần báo\n"
-                "🔹 *Note:* Ghi chú thêm (nếu có)\n\n"
-                "📌 Ví dụ:\n"
-                "`Khach: {Đặng Huỳnh Duyệt}`\n"
-                "`Sdt: {0969963324}`\n"
-                "`Dao: {19M990}`\n"
-                "`Phi: {2%}`\n"
-                "`TienPhi: {400K}`\n"
-                "`RutThieu: {400K}`\n"
-                "`Tong: {19M590}`\n"
-                "`LichCanhBao: {21}`\n"
-                "`Note: {Chuyển khoản hộ em với}`",
-                parse_mode="Markdown"
-            )
+                    "Vui lòng sửa lại caption theo đúng định dạng yêu cầu."
+                    "📌 Ví dụ:\n"
+                    "`Khach: {Đặng Huỳnh Duyệt}`\n"
+                    "`Sdt: {0969963324}`\n"
+                    "`Dao: {19M990}`\n"
+                    "`Phi: {2%}`\n"
+                    "`TienPhi: {400K}`\n"
+                    "`Tong: {19M590}`\n"
+                    "`LichCanhBao: {21}`\n"
+                    "`Note: {Chuyển khoản hộ em với}`",
+                    parse_mode="Markdown"
+                    )
             return None, "None"
         return parsed, None
 
     elif str(chat_id) == GROUP_RUT_ID:
         # ⚠️ Bắt buộc mỗi dòng đều phải có nháy ' hoặc "
-        required_keys = ['Khach', 'Sdt', 'Rut', 'Phi', 'TienPhi', 'ChuyenKhoan','LichCanhBao', 'Note']
+        required_keys = ['Khach', 'Sdt', 'Rut', 'Phi', 'TienPhi','Tong','LichCanhBao']
         for key in required_keys:
             pattern = rf"{key}:\s*(?:['\"])?(.+?)(?:['\"])?(?:\n|$)"
             if not re.search(pattern, caption, re.IGNORECASE):
@@ -109,38 +98,27 @@ def validate_caption(update,chat_id, caption):
                     "`Rut: {19M990}`\n"
                     "`Phi: {2%}`\n"
                     "`TienPhi: {400K}`\n"
-                    "`ChuyenKhoan: {19M590}`\n"
+                    "`Tong: {19M590}`\n"
                     "`LichCanhBao: {21}`\n"
-                    "`STK: 868686 - EXIMBANK - BÙI VĂN KIÊN`\n"
                     "`Note: {Chuyển khoản hộ em với}`",
                     parse_mode="Markdown"
-                )
+                    )
                 return None, "None"
         parsed = parse_message_rut(caption)
         if 'rut' not in parsed:
             update.message.reply_text(
-            "❌ Đây là group Rút, vui lòng chỉ gửi thông tin **rút tiền** theo đúng định dạng sau:\n\n"
-            "🔹 *Khách:* Tên người rút\n"
-            "🔹 *Sdt:* Số điện thoại\n"
-            "🔹 *Rut:* Số tiền rút (ví dụ: '19M990')\n"
-            "🔹 *Phi:* Phí phần trăm (ví dụ: '2%')\n"
-            "🔹 *TienPhi:* Số tiền phí (ví dụ: '400K')\n"
-            "🔹 *ChuyenKhoan:* Số tiền chuyển khoản sau phí\n"
-            "🔹 *LichCanhBao:* Số lịch cần báo\n"
-            "🔹 *STK:* Số tài khoản\n"
-            "🔹 *Note:* Ghi chú thêm (nếu có)\n\n"
-            "📌 Ví dụ:\n"
-            "`Khach: 'Đặng Huỳnh Duyệt'`\n"
-            "`Sdt: '0969963324'`\n"
-            "`Rut: '19M990'`\n"
-            "`Phi: '2%'`\n"
-            "`TienPhi: '400K'`\n"
-            "`ChuyenKhoan: '19M590'`\n"
-            "`LichCanhBao: '21'`\n"
-            "`STK: '868686 - EXIMBANK - BÙI VĂN KIÊN'`\n"
-            "`Note: 'Chuyển khoản hộ em với'`",
-            parse_mode="Markdown"
-        )
+                    "Vui lòng sửa lại caption theo đúng định dạng yêu cầu."
+                    "📌 Ví dụ:\n"
+                    "`Khach: {Đặng Huỳnh Duyệt}`\n"
+                    "`Sdt: {0969963324}`\n"
+                    "`Rut: {19M990}`\n"
+                    "`Phi: {2%}`\n"
+                    "`TienPhi: {400K}`\n"
+                    "`Tong: {19M590}`\n"
+                    "`LichCanhBao: {21}`\n"
+                    "`Note: {Chuyển khoản hộ em với}`",
+                    parse_mode="Markdown"
+                    )
             return None, "None"
         return parsed, None
 
@@ -216,10 +194,28 @@ def handle_photo(update, context):
     media_group_storage[media_group_id]["timer"] = timer
     timer.start()
 
+def append_multiple_by_headers(sheet, data_dict_list):
+    headers = sheet.row_values(1)
+    rows_to_append = []
 
-def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_DAO_ID):
+    for data_dict in data_dict_list:
+        row_data = [""] * len(headers)
+        for i, h in enumerate(headers):
+            value = data_dict.get(h, "")
+            # Nếu là chuỗi số có số 0 ở đầu → giữ nguyên bằng công thức
+            if isinstance(value, str) and value.isdigit() and value.startswith("0"):
+                row_data[i] = f'="{value}"'
+            else:
+                row_data[i] = str(value)
+        rows_to_append.append(row_data)
+
+    if rows_to_append:
+        sheet.append_rows(rows_to_append, value_input_option="USER_ENTERED")
+        print(f"✅ Đã ghi {len(rows_to_append)} dòng vào Google Sheet.")
+    
+def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
-    full_name = message.from_user.full_name
+    full_name = message.from_user.username
     timestamp = message.date.strftime("%Y-%m-%d %H:%M:%S")
     image_b64_list = context.user_data.get("image_data", [])
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
@@ -234,42 +230,67 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_DA
 
         # Mở Google Sheet trước khi lặp
         spreadsheet = client.open_by_key(sheet_id)
-
+        list_data=[]
+        list_row = []
+        sum=0
         for img_b64 in image_b64_list:
             result = analyzer.analyze_bill(img_b64)
             if result is None:
                 continue
 
             ten_ngan_hang = result.get("ten_ngan_hang")
-
+            
             row = [
                 timestamp,
                 full_name,
                 caption['khach'],
                 caption['sdt'],
-                caption['dao'],
-                caption['phi'],
-                caption['tien_phi'],
-                caption['rut_thieu'],
-                caption['tong'],
-                caption['lich_canh_bao'],
-                caption['note'],
+                "DAO",
                 result.get("ten_ngan_hang"),
-                result.get("ten_don_vi_ban"),
-                result.get("dia_chi_don_vi_ban"),
                 result.get("ngay_giao_dich"),
                 result.get("gio_giao_dich"),
                 result.get("tong_so_tien"),
-                result.get("don_vi_tien_te"),
-                result.get("loai_the"),
-                result.get("ma_giao_dich"),
-                result.get("ma_don_vi_chap_nhan"),
+                result.get("so_the"),
+                result.get("tid"),
                 result.get("so_lo"),
-                result.get("so_tham_chieu"),
-                result.get("loai_giao_dich"),
-                message.caption or ""
+                result.get("so_hoa_don"),    
+                result.get("ten_may_pos"),
+                message.caption
             ]
-            insert_bill_row_dao(db, row)  # Ghi vào MySQL
+        
+            data = {
+                "NGÀY": timestamp,
+                "NGƯỜI GỬI": full_name,
+                "HỌ VÀ TÊN KHÁCH": caption['khach'],
+                "SĐT KHÁCH": caption['sdt'],
+                "ĐÁO / RÚT": "Đáo",
+                "SỐ TIỀN": result.get("tong_so_tien"),
+                "KẾT TOÁN": "kết toán",
+                "SỐ THẺ THẺ ĐÁO / RÚT": result.get("so_the"),
+                "TID": result.get("tid"),
+                "SỐ LÔ": result.get("so_lo"),
+                "SỐ HÓA ĐƠN": result.get("so_hoa_don"),
+                "GIỜ GIAO DỊCH": result.get("gio_giao_dich"),
+                "TÊN POS": result.get("ten_may_pos"),
+                "PHÍ DV": caption['tien_phi'],
+            }
+            if result.get("so_hoa_don") is not None:
+                list_data.append(data)
+                insert_bill_row(db, row)
+                sum += int(result.get("tong_so_tien") or 0)
+                # Lưu lại kết quả để in ra cuối
+                res_mess.append(
+                    f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
+                    f"👤 {caption['khach']} - "
+                    f"💰 {result.get('tong_so_tien') or '?'} - "
+                    f"💰 {result.get('tid') or '?'} - "
+                    f"📄 {result.get('so_hoa_don') or ''} - "
+                    f"🧾 {result.get('so_lo') or ''} - "
+                    f"🖥️ {result.get('ten_may_pos') or ''}"
+                )
+            
+        for item in list_data:
+            item["KẾT TOÁN"] = sum
             # Xác định sheet theo ngân hàng
             if ten_ngan_hang == "MB":
                 sheet = spreadsheet.worksheet("MB Bank")
@@ -280,19 +301,9 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_DA
             elif ten_ngan_hang is None:
                 sheet = spreadsheet.worksheet("MPOS")
             else:
-                sheet = spreadsheet.worksheet("Unknown")  # fallback nếu cần
-
+                sheet = spreadsheet.worksheet("Unknown")
             # Ghi dữ liệu
-            sheet.append_row(row)
-            # Lưu lại kết quả để in ra cuối
-            res_mess.append(
-                f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
-                f"👤 {caption['khach']} - "
-                f"💰 {result.get('tong_so_tien') or '?'} {result.get('don_vi_tien_te') or ''} - "
-                f"💳 {result.get('loai_the') or ''} - "
-                f"📄 {result.get('ma_giao_dich') or ''} - "
-                f"🧾 {result.get('so_lo') or ''}"
-            )
+        append_multiple_by_headers(sheet, list_data)
         db.close()
         if res_mess:
             reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
@@ -304,7 +315,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_DA
 
 def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
-    full_name = message.from_user.full_name
+    full_name = message.from_user.username
     timestamp = message.date.strftime("%Y-%m-%d %H:%M:%S")
     image_b64_list = context.user_data.get("image_data", [])
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
@@ -318,8 +329,10 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
 
         # Mở Google Sheet trước khi lặp
         spreadsheet = client.open_by_key(sheet_id)
-        
+        list_data=[]
         print(len(image_b64_list), "ảnh cần xử lý")
+        sum= 0
+        
         for img_b64 in image_b64_list:
             result = analyzer.analyze_bill(img_b64)
             if result is None:
@@ -332,53 +345,75 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 full_name,
                 caption['khach'],
                 caption['sdt'],
-                caption['rut'],
-                caption['phi'],
-                caption['tien_phi'],
-                caption['chuyen_khoan'],
-                caption['lich_canh_bao'],
-                caption['stk'],
-                caption['note'],
+                "DAO",
                 result.get("ten_ngan_hang"),
-                result.get("ten_don_vi_ban"),
-                result.get("dia_chi_don_vi_ban"),
                 result.get("ngay_giao_dich"),
                 result.get("gio_giao_dich"),
                 result.get("tong_so_tien"),
-                result.get("don_vi_tien_te"),
-                result.get("loai_the"),
-                result.get("ma_giao_dich"),
-                result.get("ma_don_vi_chap_nhan"),
+                result.get("so_the"),
+                result.get("tid"),
                 result.get("so_lo"),
-                result.get("so_tham_chieu"),
-                result.get("loai_giao_dich"),
-                message.caption or ""
+                result.get("so_hoa_don"),    
+                result.get("ten_may_pos"),
+                message.caption
             ]
-            
-            insert_bill_row_rut(db, row)  # Ghi vào MySQL
+              # Ghi vào MySQL
+            data = {
+                "NGÀY": timestamp,
+                "NGƯỜI GỬI": full_name,
+                "HỌ VÀ TÊN KHÁCH": caption['khach'],
+                "SĐT KHÁCH": caption['sdt'],
+                "ĐÁO / RÚT": "Rút",
+                "SỐ TIỀN": result.get("tong_so_tien"),
+                "KẾT TOÁN": "kết toán",
+                "SỐ THẺ THẺ ĐÁO / RÚT": result.get("so_the"),
+                "TID": result.get("tid"),
+                "SỐ LÔ": result.get("so_lo"),
+                "SỐ HÓA ĐƠN": result.get("so_hoa_don"),
+                "GIỜ GIAO DỊCH": result.get("gio_giao_dich"),
+                "TÊN POS": result.get("ten_may_pos"),
+                "PHÍ DV": caption['tien_phi'],
+            }
+            if result.get("so_hoa_don") is not None:
+                list_data.append(data)
+                insert_bill_row(db, row)
+                sum += int(result.get("tong_so_tien") or 0)
+
+                # Lưu lại kết quả để in ra cuối
+                res_mess.append(
+                    f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
+                    f"👤 {caption['khach']} - "
+                    f"💰 {result.get('tong_so_tien') or '?'} - "
+                    f"💰 {result.get('tid') or '?'} - "
+                    f"📄 {result.get('so_hoa_don') or ''} - "
+                    f"🧾 {result.get('so_lo') or ''} - "
+                    f"🖥️ {result.get('ten_may_pos') or ''}"
+                )
+        for item in list_data:
+            item["KẾT TOÁN"] = sum
+            # Ghi dữ liệu
             # Xác định sheet theo ngân hàng
             if ten_ngan_hang == "MB":
                 sheet = spreadsheet.worksheet("MB Bank")
+                
+
             elif ten_ngan_hang == "HDBank":
                 sheet = spreadsheet.worksheet("HD Bank")
+                
+
             elif ten_ngan_hang == "VPBank":
                 sheet = spreadsheet.worksheet("VP Bank")
+                
+
             elif ten_ngan_hang is None:
                 sheet = spreadsheet.worksheet("MPOS")
-            else:
-                sheet = spreadsheet.worksheet("Unknown")  # fallback nếu cần
+                
 
-            # Ghi dữ liệu
-            sheet.append_row(row)
-            # Lưu lại kết quả để in ra cuối
-            res_mess.append(
-                f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
-                f"👤 {caption['khach']} - "
-                f"💰 {result.get('tong_so_tien') or '?'} {result.get('don_vi_tien_te') or ''} - "
-                f"💳 {result.get('loai_the') or ''} - "
-                f"📄 {result.get('ma_giao_dich') or ''} - "
-                f"🧾 {result.get('so_lo') or ''}"
-            )
+            else:
+                sheet = spreadsheet.worksheet("Unknown")
+        append_multiple_by_headers(sheet, list_data)
+
+
         db.close()
         if res_mess:
             reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
@@ -388,66 +423,25 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         message.reply_text(reply_msg)
 
 
-def insert_bill_row_rut(db, row):
+def insert_bill_row(db, row):
     query = """
-        INSERT INTO thong_tin_hoa_don_rut (
+        INSERT INTO thong_tin_hoa_don (
             thoi_gian,
             nguoi_gui,
             ten_khach,
             so_dien_thoai,
-            so_tien_rut,
-            phan_tram_phi,
-            so_tien_phi,
-            so_tien_chuyen_khoan,
-            lich_canh_bao,
-            so_tai_khoan,
-            ghi_chu,
+            type_dao_rut,
             ngan_hang,
-            don_vi_ban,
-            dia_chi_don_vi,
             ngay_giao_dich,
             gio_giao_dich,
             tong_so_tien,
-            don_vi_tien_te,
-            loai_the,
-            ma_giao_dich,
-            ma_don_vi_chap_nhan,
+            so_the,
+            tid,
             so_lo,
-            so_tham_chieu,
-            loai_giao_dich,
+            so_hoa_don,
+            ten_may_pos,
             caption_goc
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """
-    db.execute(query, row)
-def insert_bill_row_dao(db, row):
-    query = """
-        INSERT INTO thong_tin_hoa_don_dao (
-            thoi_gian,
-            nguoi_gui,
-            ten_khach,
-            so_dien_thoai,
-            so_tien_dao,
-            phan_tram_phi,
-            so_tien_phi,
-            so_tien_rut_thieu,
-            tong,
-            lich_canh_bao,
-            ghi_chu,
-            ngan_hang,
-            don_vi_ban,
-            dia_chi_don_vi,
-            ngay_giao_dich,
-            gio_giao_dich,
-            tong_so_tien,
-            don_vi_tien_te,
-            loai_the,
-            ma_giao_dich,
-            ma_don_vi_chap_nhan,
-            so_lo,
-            so_tham_chieu,
-            loai_giao_dich,
-            caption_goc
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     db.execute(query, row)
 

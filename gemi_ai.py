@@ -38,38 +38,60 @@ class GeminiBillAnalyzer:
         try:
             model = genai.GenerativeModel('gemini-1.5-flash') # Sử dụng model vision cho input hình ảnh
             invoice_extraction_prompt = """
-                Bạn là một chuyên gia phân tích hóa đơn tài chính. Hãy phân tích hình ảnh hóa đơn được cung cấp và trích xuất các thông tin sau vào định dạng JSON. Nếu một trường thông tin không xuất hiện hoặc không thể xác định rõ ràng trên hóa đơn, hãy gán giá trị null cho trường đó.
-                **QUAN TRỌNG:** Tên các trường (keys) trong đối tượng JSON phải chính xác như được liệt kê dưới đây. Nếu một trường thông tin không xuất hiện hoặc không thể xác định rõ ràng trên hóa đơn, hãy gán giá trị `null` cho trường đó.
-                Các trường thông tin cần trích xuất bao gồm:
-
-                "ten_ngan_hang": Tên của ngân hàng phát hành hóa đơn, tên của đơn vị chấp nhận thanh toán (ví dụ: "MPOS", "MB", "HDBank", "VPBank"), hoặc tên của tổ chức tài chính trung gian nếu có. Ưu tiên tên ngân hàng nếu có, nếu không tìm thấy, tìm tên thương hiệu dịch vụ thanh toán nổi bật.
-
-                "ten_don_vi_ban": Tên của đơn vị bán hàng hoặc cung cấp dịch vụ. Tìm kiếm các nhãn như "Tên đơn vị:", "Cửa hàng:", "Tên Đại lý:", hoặc tên thương hiệu chính của doanh nghiệp.
-
-                "dia_chi_don_vi_ban": Địa chỉ đầy đủ của đơn vị bán hàng hoặc cung cấp dịch vụ. Tìm kiếm các nhãn như "Địa chỉ:", "Đ/C:", "ĐỊA CHỈ ĐẠI LÝ:", hoặc các dòng địa chỉ liên quan đến doanh nghiệp.
-
-                "ngay_giao_dich": Ngày giao dịch diễn ra. Chuẩn hóa định dạng thành YYYY-MM-DD. Tìm kiếm các nhãn như "Ngày:", "NGÀY:", "DATE:", "Ngày giao dịch:".
-
-                "gio_giao_dich": Giờ giao dịch diễn ra. Chuẩn hóa định dạng thành HH:MM:SS. Tìm kiếm các nhãn như "Giờ:", "GIỜ:", "TIME:", "Giờ giao dịch:".
-
-                "tong_so_tien": Tổng số tiền cuối cùng của giao dịch. Giá trị này phải là một số (hoặc chuỗi số) và không chứa ký tự phân tách hàng nghìn (ví dụ: "10200000" thay vì "10.200.000").
-
-                "don_vi_tien_te": Ký hiệu hoặc mã loại tiền tệ được sử dụng (ví dụ: "VND", "USD"). Tìm kiếm gần tổng số tiền.
-
-                "loai_the": Loại thẻ được sử dụng nếu thanh toán bằng thẻ (ví dụ: "Mastercard", "Visa", "ATM", "NAPAS"). Tìm kiếm các nhãn như "Loại thẻ:", "Thẻ:", "Card Type:", hoặc tên logo thẻ. Nếu không có thông tin về thẻ, hãy để là null.
-
-                "ma_giao_dich": Mã giao dịch duy nhất. Tìm kiếm các nhãn như "Mã GD:", "Số giao dịch:", "Transaction ID:", "TID:", "Mã tham chiếu:".
-
-                "ma_don_vi_chap_nhan": Mã định danh của đơn vị chấp nhận thẻ. Tìm kiếm các nhãn như "Mã ĐV:", "Merchant ID:", "MID:", "Mã ĐVCNT:".
-
-                "so_lo": Số lô giao dịch. Tìm kiếm các nhãn như "Số lô:", "Lô:", "Batch No:", "BATCH:", "Số lô:".
-
-                "so_tham_chieu": Số tham chiếu bổ sung (nếu có). Tìm kiếm các nhãn như "Mã chuẩn chi:", "Mã tham chiếu:", "TRACE No/SỐ HÓA ĐƠN:".
-
-                "loai_giao_dich": Loại giao dịch (ví dụ: "Thanh Toán", "KẾT TOÁN", "RÚT TIỀN"). Nếu không có, để null.
-
-                Hãy đảm bảo rằng JSON trả về là một đối tượng hợp lệ chứa tất cả các trường trên.
+            Bạn là một chuyên gia phân tích hóa đơn tài chính. Hãy phân tích hình ảnh hóa đơn được cung cấp và trích xuất các thông tin sau vào định dạng JSON. Nếu một trường không xuất hiện hoặc không thể xác định rõ ràng từ hóa đơn, hãy gán giá trị null cho trường đó.
+            **YÊU CẦU QUAN TRỌNG:**
+            - Tên các trường (keys) trong đối tượng JSON phải **chính xác** như liệt kê bên dưới.
+            - Nếu một trường không tìm thấy trên hóa đơn hoặc không rõ ràng, gán giá trị là `null`.
+            - Tất cả giá trị số tiền phải loại bỏ dấu phân cách hàng nghìn (chỉ dùng số, ví dụ: `"5020000"` thay vì `"5.020.000"`).
+            **Các trường cần trích xuất:**
+            1. "ten_ngan_hang":  
+            Tên ngân hàng phát hành hóa đơn, hoặc tên đơn vị chấp nhận thanh toán (ví dụ: "HDBank", "MB", "VPBank", "MPOS",...). Ưu tiên tên ngân hàng, nếu không có thì lấy tên thương hiệu thanh toán nổi bật.
+            2. "ngay_giao_dich":  
+            Ngày giao dịch, chuẩn hóa định dạng thành "YYYY-MM-DD". Tìm kiếm nhãn như: "Ngày:", "NGÀY:", "DATE:", "Ngày giao dịch:".
+            3. "gio_giao_dich":  
+            Giờ giao dịch, chuẩn hóa định dạng thành "HH:MM:SS". Tìm kiếm nhãn như: "Giờ:", "GIỜ:", "TIME:", "Giờ giao dịch:".
+            4. "tong_so_tien":  
+            Tổng số tiền giao dịch. Trả về giá trị dạng số, không có dấu phân cách hàng nghìn (ví dụ: "1250000").
+            5. "tid":  
+            Mã thiết bị POS. Tìm nhãn như: "TID:", "Terminal ID:", "Mã thiết bị:", "Mã POS:".  
+            **Lưu ý**: Nếu hóa đơn có dòng "MID/TIT: xxx/yyy", thì phần `yyy` (sau dấu `/`) là giá trị `tid`.
+            6. "mid":  
+            Mã đơn vị chấp nhận thẻ. Tìm nhãn như: "MID:", "Merchant ID:", "Mã ĐVCNT:", "Mã đơn vị:".  
+            **Lưu ý**: Nếu hóa đơn có dòng "MID/TIT: xxx/yyy", thì phần `xxx` (trước dấu `/`) là giá trị `mid`.
+            7. "so_lo":  
+            Số lô giao dịch. Tìm nhãn như: "Batch:", "BATCH:", "Số lô:", "Lô:".
+            8. "so_tham_chieu":  
+            Số tham chiếu. Tìm nhãn như: "Số tham chiếu:", "REF:", "TRACE No:", "SỐ HÓA ĐƠN:", "REFERENCE:".
+            9. "so_hoa_don":  
+            Số hóa đơn hoặc mã giao dịch cụ thể. Tìm nhãn như: "Số hóa đơn:", "SỐ HÓA ĐƠN:", "SỐ H.ĐƠN:", "Số giao dịch:", "Transaction ID:", "Receipt No:", "Hóa đơn số:", kể cả khi viết hoa toàn bộ,Hãy cố gắng nhận dạng cả những trường hợp `SỐ HÓA ĐƠN` viết hoa, có thể nằm ở dòng giữa hoặc cuối hóa đơn".
+            10. "loai_giao_dich":  
+            Loại giao dịch, ví dụ: "Thanh Toán", "Rút Tiền", "Hoàn Tiền", "Kết Toán",... Nếu không có, để null.
+            11. "ten_may_pos":  
+            Tên máy POS hoặc tên điểm giao dịch in trên hóa đơn, ví dụ: "XIXI GAMING 2", "GAS NGUYEN LONG 1",... Nếu không thấy, để null.
+            12. "so_the":  
+            Số thẻ được sử dụng để thanh toán, bao gồm cả phần bị ẩn. Tìm kiếm các chuỗi dạng như: `"4413 57** **** 8787"`, `"5138 **** **** 0890"` hoặc tương tự. Nếu không thấy, để null.
+            **YÊU CẦU ĐẦU RA:**
+            - Trả về đúng 1 đối tượng JSON chứa đầy đủ 12 trường trên.
+            - Không thêm giải thích hoặc văn bản nào khác ngoài đối tượng JSON.
+            - Đảm bảo JSON hợp lệ.
+            Ví dụ đầu ra:
+            {
+            "ten_ngan_hang": "HDBank",
+            "ngay_giao_dich": "2025-06-19",
+            "gio_giao_dich": "13:06:25",
+            "tong_so_tien": "50200000",
+            "tid": "54235423454",
+            "mid": "234234234",
+            "so_lo": "000820",
+            "so_tham_chieu": "517019445360",
+            "so_hoa_don": "000456",
+            "loai_giao_dich": "Thanh Toán",
+            "ten_may_pos": "XIXI GAMING 2",
+            "so_the": "4413 57** **** 8787"
+            }
             """
+
+
             # Tạo nội dung cho request, bao gồm hình ảnh và văn bản
             contents = [
                 {
