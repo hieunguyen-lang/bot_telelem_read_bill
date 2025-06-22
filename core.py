@@ -13,6 +13,9 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from io import BytesIO
 from gemi_ai import GeminiBillAnalyzer
 from mysql_db_connector import MySQLConnector
+
+
+
 from dotenv import load_dotenv
 load_dotenv()  # Tự động tìm và load từ .env
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -194,24 +197,37 @@ def handle_photo(update, context):
     media_group_storage[media_group_id]["timer"] = timer
     timer.start()
 
+
 def append_multiple_by_headers(sheet, data_dict_list):
     headers = sheet.row_values(1)
-    rows_to_append = []
 
+    # ⚠️ Chỉ dòng đầu có giá trị 'KẾT TOÁN'
+    if data_dict_list and "KẾT TOÁN" in data_dict_list[0]:
+        value = data_dict_list[0]["KẾT TOÁN"]
+        for i, item in enumerate(data_dict_list):
+            item["KẾT TOÁN"] = value if i == 0 else ""
+
+    rows_to_append = []
     for data_dict in data_dict_list:
         row_data = [""] * len(headers)
         for i, h in enumerate(headers):
             value = data_dict.get(h, "")
-            # Nếu là chuỗi số có số 0 ở đầu → giữ nguyên bằng công thức
-            if isinstance(value, str) and value.isdigit() and value.startswith("0"):
+            if h in {"SỐ HÓA ĐƠN", "SỐ LÔ", "TID"} and isinstance(value, str) and value.startswith("0"):
                 row_data[i] = f'="{value}"'
             else:
                 row_data[i] = str(value)
         rows_to_append.append(row_data)
 
     if rows_to_append:
+        start_row = len(sheet.get_all_values()) + 1
         sheet.append_rows(rows_to_append, value_input_option="USER_ENTERED")
-        print(f"✅ Đã ghi {len(rows_to_append)} dòng vào Google Sheet.")
+        end_row = start_row + len(rows_to_append) - 1
+
+        if "KẾT TOÁN" in headers and end_row > start_row:
+            col_idx = headers.index("KẾT TOÁN") + 1
+            sheet.merge_cells(start_row, col_idx, end_row, col_idx)
+
+        print(f"✅ Đã ghi và gộp {len(rows_to_append)} dòng vào Google Sheet.")
     
 def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
