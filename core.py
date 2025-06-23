@@ -7,9 +7,7 @@ import threading
 import os
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from telegram.ext import Updater, MessageHandler, Filters
-from telegram.ext import CallbackQueryHandler
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+# from telegram.ext import Updater, MessageHandler, Filters
 from io import BytesIO
 from gemi_ai import GeminiBillAnalyzer
 from mysql_db_connector import MySQLConnector
@@ -44,7 +42,7 @@ db = MySQLConnector(
 )
 media_group_storage = {}
 
-def validate_caption(update,chat_id, caption):
+async def validate_caption(update,chat_id, caption):
     if not caption:
         return None, "❌ Không tìm thấy nội dung để xử lý. Vui lòng thêm caption cho ảnh."
 
@@ -54,7 +52,7 @@ def validate_caption(update,chat_id, caption):
         for key in required_keys:
             pattern = rf"{key}:\s*(?:['\"])?(.+?)(?:['\"])?(?:\n|$)"
             if not re.search(pattern, caption, re.IGNORECASE):
-                update.message.reply_text(
+                await update.message.reply_text(
                     "Vui lòng sửa lại caption theo đúng định dạng yêu cầu."
                     "📌 Ví dụ:\n"
                     "`Khach: {Đặng Huỳnh Duyệt}`\n"
@@ -71,7 +69,7 @@ def validate_caption(update,chat_id, caption):
             
         parsed = parse_message_dao(caption)
         if 'dao' not in parsed:
-            update.message.reply_text(
+            await update.message.reply_text(
                     "Vui lòng sửa lại caption theo đúng định dạng yêu cầu."
                     "📌 Ví dụ:\n"
                     "`Khach: {Đặng Huỳnh Duyệt}`\n"
@@ -93,7 +91,7 @@ def validate_caption(update,chat_id, caption):
         for key in required_keys:
             pattern = rf"{key}:\s*(?:['\"])?(.+?)(?:['\"])?(?:\n|$)"
             if not re.search(pattern, caption, re.IGNORECASE):
-                update.message.reply_text(
+                await update.message.reply_text(
                     "Vui lòng sửa lại caption theo đúng định dạng yêu cầu."
                     "📌 Ví dụ:\n"
                     "`Khach: {Đặng Huỳnh Duyệt}`\n"
@@ -109,7 +107,7 @@ def validate_caption(update,chat_id, caption):
                 return None, "None"
         parsed = parse_message_rut(caption)
         if 'rut' not in parsed:
-            update.message.reply_text(
+            await update.message.reply_text(
                     "Vui lòng sửa lại caption theo đúng định dạng yêu cầu."
                     "📌 Ví dụ:\n"
                     "`Khach: {Đặng Huỳnh Duyệt}`\n"
@@ -127,7 +125,7 @@ def validate_caption(update,chat_id, caption):
 
     return {}, None
 
-def handle_photo(update, context):
+async def handle_photo(update, context):
     chat_id = update.effective_chat.id
     chat_title = update.effective_chat.title
     print(f"Ảnh gửi từ group {chat_title} (ID: {chat_id})")
@@ -153,7 +151,7 @@ def handle_photo(update, context):
         # Gọi xử lý luôn (giả sử luôn là hóa đơn)
         if str(chat_id) == GROUP_DAO_ID:
            
-            handle_selection_dao(update, context, selected_type="bill")
+            await handle_selection_dao(update, context, selected_type="bill")
             
         elif str(chat_id) == GROUP_RUT_ID:
         
@@ -198,7 +196,7 @@ def handle_photo(update, context):
     timer.start()
 
 
-def append_multiple_by_headers(sheet, data_dict_list):
+async def append_multiple_by_headers(sheet, data_dict_list):
     headers = sheet.row_values(1)
 
     # ⚠️ Chỉ dòng đầu có giá trị 'KẾT TOÁN'
@@ -216,20 +214,20 @@ def append_multiple_by_headers(sheet, data_dict_list):
                 row_data[i] = f'="{value}"'
             else:
                 row_data[i] = str(value)
-        rows_to_append.append(row_data)
+        await rows_to_append.append(row_data)
 
     if rows_to_append:
         start_row = len(sheet.get_all_values()) + 1
-        sheet.append_rows(rows_to_append, value_input_option="USER_ENTERED")
+        await sheet.append_rows(rows_to_append, value_input_option="USER_ENTERED")
         end_row = start_row + len(rows_to_append) - 1
 
         if "KẾT TOÁN" in headers and end_row > start_row:
             col_idx = headers.index("KẾT TOÁN") + 1
-            sheet.merge_cells(start_row, col_idx, end_row, col_idx)
+            await sheet.merge_cells(start_row, col_idx, end_row, col_idx)
 
         print(f"✅ Đã ghi và gộp {len(rows_to_append)} dòng vào Google Sheet.")
     
-def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
+async def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
     full_name = message.from_user.username
     timestamp = message.date.strftime("%Y-%m-%d %H:%M:%S")
@@ -240,7 +238,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
 
     if selected_type == "bill":
         if not image_b64_list:
-            message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
+            await message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
             return
         res_mess = []  # Để lưu kết quả trả về từ từng ảnh
 
@@ -292,7 +290,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             }
             if result.get("so_hoa_don") is not None:
                 list_data.append(data)
-                insert_bill_row(db, row)
+                await insert_bill_row(db, row)
                 sum += int(result.get("tong_so_tien") or 0)
                 # Lưu lại kết quả để in ra cuối
                 res_mess.append(
@@ -319,17 +317,17 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             else:
                 sheet = spreadsheet.worksheet("Unknown")
             # Ghi dữ liệu
-        append_multiple_by_headers(sheet, list_data)
+        await append_multiple_by_headers(sheet, list_data)
         db.close()
         if res_mess:
             reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
         else:
             reply_msg = "⚠️ Không xử lý được hóa đơn nào."
 
-        message.reply_text(reply_msg)
+        await message.reply_text(reply_msg)
 
 
-def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
+async def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
     full_name = message.from_user.username
     timestamp = message.date.strftime("%Y-%m-%d %H:%M:%S")
@@ -339,7 +337,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
 
     if selected_type == "bill":
         if not image_b64_list:
-            message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
+            await message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
             return
         res_mess = []  # Để lưu kết quả trả về từ từng ảnh
 
@@ -392,7 +390,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             }
             if result.get("so_hoa_don") is not None:
                 list_data.append(data)
-                insert_bill_row(db, row)
+                await insert_bill_row(db, row)
                 sum += int(result.get("tong_so_tien") or 0)
 
                 # Lưu lại kết quả để in ra cuối
@@ -427,7 +425,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
 
             else:
                 sheet = spreadsheet.worksheet("Unknown")
-        append_multiple_by_headers(sheet, list_data)
+        await append_multiple_by_headers(sheet, list_data)
 
 
         db.close()
@@ -436,10 +434,10 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         else:
             reply_msg = "⚠️ Không xử lý được hóa đơn nào."
 
-        message.reply_text(reply_msg)
+        await message.reply_text(reply_msg)
 
 
-def insert_bill_row(db, row):
+async def insert_bill_row(db, row):
     query = """
         INSERT INTO thong_tin_hoa_don (
             thoi_gian,
@@ -459,7 +457,7 @@ def insert_bill_row(db, row):
             caption_goc
         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
-    db.execute(query, row)
+    await db.execute(query, row)
 
 def parse_message_rut(text):
     data = {}
@@ -521,14 +519,4 @@ def parse_message_dao(text):
 
     return data
 
-# updater = Updater(
-#     token=TELEGRAM_TOKEN,
-#     request_kwargs={'proxy_url': PROXY_URL}
-# )
-
-# dp = updater.dispatcher
-# # Thứ tự rất quan trọng: handler kiểm tra group phải đứng trước
-# dp.add_handler(MessageHandler(Filters.photo, handle_photo))
-# updater.start_polling()
-# updater.idle()
 

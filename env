@@ -1,0 +1,19 @@
+# .env
+TELEGRAM_TOKEN=7490959705:AAGaJ_t9vMFrOmpL_OYfwagr_X39OasOGu4
+PROXY_URL=https://evjMJbhU:ZsXDQB61NgJU@154.29.86.237:34862
+SCOPE=https://spreadsheets.google.com/feeds,https://www.googleapis.com/auth/drive
+GEMINI_API_KEY=AIzaSyCt3LuIj8uG7hBIlWPNnf8pA1Wld_WBj7U
+
+
+#GROUP ID
+GROUP_DAO_ID= -1002862031179
+GROUP_RUT_ID= -4807800426
+
+#google sheet
+SHEET_DAO_ID=1dq-Y9Ns3nH3Exbv4BvgzUMdsnO3APEwxj72eAM-GstI
+SHEET_RUT_ID=1Yr2Oii5dXkUThqrDTROzy7U9ASh4DFyuVmFbuU25HkM
+
+
+# MySQL configuration
+MYSQL_ROOT_PASSWORD=root
+MYSQL_DATABASE=bill_data
