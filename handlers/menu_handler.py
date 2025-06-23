@@ -18,7 +18,7 @@ async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("📥 Nhận lệnh /menu")
     search_keyboard = [
         [
-            InlineKeyboardButton("👤 Tên khách", callback_data='search_khach'),
+            InlineKeyboardButton("👤 Tên khách", callback_data='search_ten_khach'),
             InlineKeyboardButton("📞 SĐT", callback_data='search_sdt')
         ],
         [
@@ -27,7 +27,7 @@ async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     ]
     reply_markup = InlineKeyboardMarkup(search_keyboard)
-    await update.message.reply_text("\ud83d\udd0e Chọn cách tra cứu:", reply_markup=reply_markup)
+    await update.message.reply_text("🔎 Chọn cách tra cứu:", reply_markup=reply_markup)
 
 async def handle_button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -70,7 +70,7 @@ def search_hoa_don_rut(db, field_type, keyword):
     }
 
     if field_type not in field_map:
-        raise ValueError("\u274c Trường tìm kiếm không hợp lệ.")
+        raise ValueError(" Trường tìm kiếm không hợp lệ.")
 
     query = f"""
         SELECT * FROM thong_tin_hoa_don

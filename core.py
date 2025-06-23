@@ -328,8 +328,10 @@ async def handle_selection_dao(update, context, selected_type="bill",sheet_id=SH
             reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
         else:
             reply_msg = "⚠️ Không xử lý được hóa đơn nào."
-
+        print(res_mess)
+        print(reply_msg)
         await message.reply_text(reply_msg)
+        
 
 
 async def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
