@@ -8,6 +8,7 @@ import re
 class GeminiBillAnalyzer:
     def __init__(self, api_key=''):
         genai.configure(api_key=api_key)
+        self.model = genai.GenerativeModel('gemini-2.0-flash') # Sử dụng model vision cho input hình ảnh
 
     @staticmethod
     def image_to_base64(image_path):
@@ -36,9 +37,12 @@ class GeminiBillAnalyzer:
             print("Không thể chuyển đổi hình ảnh.")
             return None
         try:
-            model = genai.GenerativeModel('gemini-2.0-flash') # Sử dụng model vision cho input hình ảnh
+            
             invoice_extraction_prompt = """
             Bạn là một chuyên gia phân tích hóa đơn tài chính. Hãy phân tích hình ảnh hóa đơn được cung cấp và trích xuất các thông tin sau vào định dạng JSON. Nếu một trường không xuất hiện hoặc không thể xác định rõ ràng từ hóa đơn, hãy gán giá trị null cho trường đó.
+            ❗**Lưu ý quan trọng:** Nếu đây là hóa đơn chuyển tiền ngân hàng cá nhân (ví dụ như từ app ngân hàng Sacombank, Techcombank, VPBank,... mà chỉ chứa nội dung như “Giao dịch thành công”, “Chuyển khoản thành công”, “Người nhận”, “Mã giao dịch”, “Số tiền”, mà không có thông tin máy POS, MID/TID, mã số hóa đơn, số lô,…), thì đây **không phải là hóa đơn thanh toán POS**, hãy **trả về: `null`**.
+
+            Nếu **là hóa đơn POS hợp lệ**, trích xuất các trường dưới đây vào một đối tượng JSON:
             **YÊU CẦU QUAN TRỌNG:**
             - Tên các trường (keys) trong đối tượng JSON phải **chính xác** như liệt kê bên dưới.
             - Nếu một trường không tìm thấy trên hóa đơn hoặc không rõ ràng, gán giá trị là `null`.
@@ -108,8 +112,8 @@ class GeminiBillAnalyzer:
             ]
 
             print("Đang gửi yêu cầu đến Gemini API...")
-            response = model.generate_content(contents)
-            print(response.text)
+            response = self.model.generate_content(contents)
+            #print(response.text)
            
 
             # Áp dụng regex TRÊN BIẾN NÀY (raw_llm_response_text)

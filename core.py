@@ -44,85 +44,73 @@ db = MySQLConnector(
 )
 media_group_storage = {}
 
-def validate_caption(update,chat_id, caption):
+def validate_caption(update, chat_id, caption):
     if not caption:
         return None, "❌ Không tìm thấy nội dung để xử lý. Vui lòng thêm caption cho ảnh."
 
+    def normalize_caption(raw_caption: str) -> str:
+        lines = raw_caption.strip().splitlines()
+        normalized = []
+        for line in lines:
+            line = line.strip()
+            # Loại bỏ khoảng trắng giữa key và dấu :
+            line = re.sub(r"(\w+)\s*:", r"\1:", line)
+            normalized.append(line)
+        return "\n".join(normalized)
+
+    def extract_keys(caption_text):
+        # Lấy các key ở đầu dòng (case-insensitive)
+        return [match.group(1).lower() for match in re.finditer(r"(?m)^(\w+):", caption_text, re.IGNORECASE)]
+
+    def send_format_guide(missing=None):
+        message = "❌ Vui lòng sửa lại caption theo đúng định dạng yêu cầu.\n"
+        if missing:
+            message += f"⚠️ Thiếu các trường sau: `{', '.join(missing)}`\n\n"
+        message += (
+            "📌 Ví dụ:\n"
+            "`Khach: {Đặng Huỳnh Duyệt}`\n"
+            "`Sdt: {0969963324}`\n"
+            f"`{'Dao' if str(chat_id) == GROUP_DAO_ID else 'Rut'}: {{19M990}}`\n"
+            "`Phi: {2%}`\n"
+            "`TienPhi: {400K}`\n"
+            "`Tong: {19M590}`\n"
+            "`LichCanhBao: {21}`\n"
+            "`Note: {Chuyển khoản hộ em với}`"
+        )
+        update.message.reply_text(message, parse_mode="Markdown")
+
+    # 🔄 Chuẩn hóa caption
+    caption = normalize_caption(caption)
+
+    # Check theo nhóm
     if str(chat_id) == GROUP_DAO_ID:
-        # ⚠️ Bắt buộc mỗi dòng đều phải có nháy ' hoặc "
-        required_keys = ['Khach', 'Sdt', 'Dao', 'Phi', 'TienPhi','Tong','LichCanhBao']
-        for key in required_keys:
-            pattern = rf"{key}:\s*(?:['\"])?(.+?)(?:['\"])?(?:\n|$)"
-            if not re.search(pattern, caption, re.IGNORECASE):
-                update.message.reply_text(
-                    "Vui lòng sửa lại caption theo đúng định dạng yêu cầu."
-                    "📌 Ví dụ:\n"
-                    "`Khach: {Đặng Huỳnh Duyệt}`\n"
-                    "`Sdt: {0969963324}`\n"
-                    "`Dao: {19M990}`\n"
-                    "`Phi: {2%}`\n"
-                    "`TienPhi: {400K}`\n"
-                    "`Tong: {19M590}`\n"
-                    "`LichCanhBao: {21}`\n"
-                    "`Note: {Chuyển khoản hộ em với}`",
-                    parse_mode="Markdown"
-                    )
-                return None, "None"
-            
+        required_keys = ['khach', 'sdt', 'dao', 'phi', 'tienphi', 'tong', 'lichcanhbao']
+        present_keys = extract_keys(caption)
+        missing_keys = [key for key in required_keys if key not in present_keys]
+
+        if missing_keys:
+            send_format_guide(missing_keys)
+            return None, "❌ Thiếu key: " + ", ".join(missing_keys)
+
         parsed = parse_message_dao(caption)
         if 'dao' not in parsed:
-            update.message.reply_text(
-                    "Vui lòng sửa lại caption theo đúng định dạng yêu cầu."
-                    "📌 Ví dụ:\n"
-                    "`Khach: {Đặng Huỳnh Duyệt}`\n"
-                    "`Sdt: {0969963324}`\n"
-                    "`Dao: {19M990}`\n"
-                    "`Phi: {2%}`\n"
-                    "`TienPhi: {400K}`\n"
-                    "`Tong: {19M590}`\n"
-                    "`LichCanhBao: {21}`\n"
-                    "`Note: {Chuyển khoản hộ em với}`",
-                    parse_mode="Markdown"
-                    )
-            return None, "None"
+            update.message.reply_text("❌ Lỗi: Không tìm thấy trường 'Dao' sau khi parse.")
+            return None, "❌ parse_message_dao thiếu key 'dao'"
         return parsed, None
 
     elif str(chat_id) == GROUP_RUT_ID:
-        # ⚠️ Bắt buộc mỗi dòng đều phải có nháy ' hoặc "
-        required_keys = ['Khach', 'Sdt', 'Rut', 'Phi', 'TienPhi','Tong','LichCanhBao']
-        for key in required_keys:
-            pattern = rf"{key}:\s*(?:['\"])?(.+?)(?:['\"])?(?:\n|$)"
-            if not re.search(pattern, caption, re.IGNORECASE):
-                update.message.reply_text(
-                    "Vui lòng sửa lại caption theo đúng định dạng yêu cầu."
-                    "📌 Ví dụ:\n"
-                    "`Khach: {Đặng Huỳnh Duyệt}`\n"
-                    "`Sdt: {0969963324}`\n"
-                    "`Rut: {19M990}`\n"
-                    "`Phi: {2%}`\n"
-                    "`TienPhi: {400K}`\n"
-                    "`Tong: {19M590}`\n"
-                    "`LichCanhBao: {21}`\n"
-                    "`Note: {Chuyển khoản hộ em với}`",
-                    parse_mode="Markdown"
-                    )
-                return None, "None"
+        required_keys = ['khach', 'sdt', 'rut', 'phi', 'tienphi', 'tong', 'lichcanhbao']
+        present_keys = extract_keys(caption)
+        missing_keys = [key for key in required_keys if key not in present_keys]
+
+        if missing_keys:
+            send_format_guide(missing_keys)
+            return None, "❌ Thiếu key: " + ", ".join(missing_keys)
+
         parsed = parse_message_rut(caption)
         if 'rut' not in parsed:
-            update.message.reply_text(
-                    "Vui lòng sửa lại caption theo đúng định dạng yêu cầu."
-                    "📌 Ví dụ:\n"
-                    "`Khach: {Đặng Huỳnh Duyệt}`\n"
-                    "`Sdt: {0969963324}`\n"
-                    "`Rut: {19M990}`\n"
-                    "`Phi: {2%}`\n"
-                    "`TienPhi: {400K}`\n"
-                    "`Tong: {19M590}`\n"
-                    "`LichCanhBao: {21}`\n"
-                    "`Note: {Chuyển khoản hộ em với}`",
-                    parse_mode="Markdown"
-                    )
-            return None, "None"
+            update.message.reply_text("❌ Lỗi: Không tìm thấy trường 'Rut' sau khi parse.")
+            return None, "❌ parse_message_rut thiếu key 'rut'"
         return parsed, None
 
     return {}, None
@@ -404,7 +392,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
 
                 # Lưu lại kết quả để in ra cuối
                 res_mess.append(
-                    f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
+                    f"🏦 {result.get('ten_ngan_hang') or 'MPOS'} - "
                     f"👤 {caption['khach']} - "
                     f"💰 {format_currency_vn(result.get('tong_so_tien')) or '?'} - "
                     f"💰 {result.get('tid') or '?'} - "

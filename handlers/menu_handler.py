@@ -2,7 +2,8 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 from mysql_db_connector import MySQLConnector
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
+
 from dotenv import load_dotenv
 load_dotenv()
 db = MySQLConnector(
@@ -22,6 +23,9 @@ def start_menu(update, context):
         [
             InlineKeyboardButton("🧾 Số lô", callback_data='menu_search_so_lo'),
             InlineKeyboardButton("🧾 Số hoá đơn", callback_data='menu_search_so_hoa_don')
+        ],
+        [
+             InlineKeyboardButton("🔍 Tra cứu theo username", callback_data='menu_search_user_commision'),
         ]
     ]
     reply_markup = InlineKeyboardMarkup(search_keyboard)
@@ -31,7 +35,10 @@ def handle_button_click(update, context):
     query = update.callback_query
     query.answer()
 
+    if query.data == 'menu_search_user_commision':
 
+        query.message.reply_text("📥 Vui lòng nhập *username* bạn muốn tra cứu (không có dấu @):", parse_mode="Markdown")
+        context.user_data['search_mode'] = 'user_commitsion'
     # Xử lý chọn kiểu tra cứu
     if query.data == 'menu_search_khach':
 
@@ -94,6 +101,45 @@ def handle_text_search(update, context):
             return
         text = format_results(results)
         update.message.reply_text(f"📋 Kết quả:\n{text}", parse_mode="Markdown")
+    elif search_mode == "user_commitsion":
+        username = keyword  # Người dùng gõ username
+        
+
+
+        now = datetime.now()
+
+        time_ranges = {
+            "1 tháng": now - timedelta(days=30),
+            "3 tháng": now - timedelta(days=90),
+            "6 tháng": now - timedelta(days=180),
+            "1 năm": now - timedelta(days=365),
+        }
+
+        reply_lines = [f"📊 *Tổng hoa hồng của* `{username}`:\n"]
+
+        for label, from_date in time_ranges.items():
+            tong = search_hoa_hong_theo_thoi_gian(db, username, from_date, now)
+            hoahong_002 = tong * 0.0002
+            reply_lines.append(f"• {label}: `{tong:,.0f}` đ")
+            reply_lines.append(f"  ↳ Nhận 0.02%: `{hoahong_002:,.0f}` đ")
+
+        update.message.reply_text("\n".join(reply_lines), parse_mode="Markdown")
+# Truy vấn DB
+def search_hoa_hong_theo_thoi_gian(db, nguoi_gui, from_date, to_date):
+    """
+    Tổng hợp MAX(tong_so_tien) mỗi so_lo trong khoảng thời gian và tính tổng
+    """
+    query = """
+        SELECT SUM(tong_tien_theo_lo) AS tong_hoa_hong
+        FROM (
+            SELECT MAX(tong_so_tien) AS tong_tien_theo_lo
+            FROM thong_tin_hoa_don
+            WHERE nguoi_gui = %s AND thoi_gian BETWEEN %s AND %s
+            GROUP BY so_lo
+        ) AS tong_theo_lo
+    """
+    result = db.fetchone(query, [nguoi_gui, from_date, to_date])
+    return result["tong_hoa_hong"] if result and result["tong_hoa_hong"] else 0
 
 def search_hoa_don_rut(db, field_type, keyword):
     """

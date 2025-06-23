@@ -48,7 +48,9 @@ def handle_button_click_hoahong(update: Update, context: CallbackContext):
 
         for label, from_date in time_ranges.items():
             tong = search_hoa_hong_theo_thoi_gian(db, username, from_date, now)
+            hoahong_002 = tong * 0.0002
             reply_lines.append(f"• {label}: `{tong:,.0f}` đ")
+            reply_lines.append(f"  ↳ Nhận 0.02%: `{hoahong_002:,.0f}` đ")
 
         query.message.reply_text("\n".join(reply_lines), parse_mode="Markdown")
 

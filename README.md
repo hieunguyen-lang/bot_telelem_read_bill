@@ -29,3 +29,6 @@
         ]
         
 docker exec mysql_bill /usr/bin/mysqldump -u root --password=root bill_data > "C:\Users\Admin\Documents\tool\bot_telelem_read_bill\backup\db_backup.sql"
+
+
+AIzaSyAStkF_-lQrzja-CTXVvA__9vqVrPwsmTQ
