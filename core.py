@@ -13,7 +13,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from io import BytesIO
 from gemi_ai import GeminiBillAnalyzer
 from mysql_db_connector import MySQLConnector
-
+from redis_connect import RedisDuplicateChecker
 
 
 from dotenv import load_dotenv
@@ -40,10 +40,11 @@ db = MySQLConnector(
     host=os.getenv("MYSQL_HOST"),
     user=os.getenv("MYSQL_USER"),
     password=os.getenv("MYSQL_ROOT_PASSWORD"),
+    port=os.getenv("MYSQL_ROOT_PORT"),
     database=os.getenv("MYSQL_DATABASE")
 )
 media_group_storage = {}
-
+redis=RedisDuplicateChecker()
 def validate_caption(update, chat_id, caption):
     if not caption:
         return None, "❌ Không tìm thấy nội dung để xử lý. Vui lòng thêm caption cho ảnh."
@@ -216,6 +217,18 @@ def append_multiple_by_headers(sheet, data_dict_list):
     sheet.append_rows(rows_to_append, value_input_option="USER_ENTERED")
     print(f"✅ Đã ghi {len(rows_to_append)} dòng vào Google Sheet.")
 
+def generate_invoice_key_simple(result: dict, caption: dict) -> str:
+    """
+    Tạo khóa duy nhất kiểm tra duplicate chỉ từ một số trường.
+    Ưu tiên các trường đặc trưng: số hóa đơn, số lô, tên khách.
+    """
+    so_hoa_don = result.get("so_hoa_don") or ''
+    so_lo = result.get("so_lo") or ''
+    ten_khach = caption.get("khach") or ''
+    
+    key = f"{so_hoa_don.strip().lower()}_{so_lo.strip().lower()}_{ten_khach.strip().lower()}"
+    return key
+
 
 def format_currency_vn(value):
     try:
@@ -232,7 +245,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
     print(f"Đang xử lý ảnh từ {full_name} ({message.from_user.id}) - {timestamp}")
     print(f"Caption: {caption}")
 
-    if selected_type == "bill":
+    try:
         if not image_b64_list:
             message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
             return
@@ -284,6 +297,19 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "TÊN POS": result.get("ten_may_pos"),
                 "PHÍ DV": caption['tien_phi'],
             }
+            invoice_key = generate_invoice_key_simple(result, caption)
+            
+            if redis.is_duplicate(invoice_key):
+                message.reply_text(
+                    f"🚫 Hóa đơn đã được gửi trước đó:\n"
+                    f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
+                    f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
+                    f"• Số lô: `{result.get('so_lo')}`\n"
+                    f"• Khách: *{caption.get('khach', 'Không rõ')}*",
+                    parse_mode="Markdown"
+                )
+                return
+            redis.mark_processed(invoice_key)
             if result.get("so_hoa_don") is not None:
                 list_data.append(data)
                 insert_bill_row(db, row)
@@ -322,7 +348,8 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             reply_msg = "⚠️ Không xử lý được hóa đơn nào."
 
         message.reply_text(reply_msg)
-
+    except Exception as e:
+        message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí" + str(e))
 
 def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
@@ -331,8 +358,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
     image_b64_list = context.user_data.get("image_data", [])
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
     print(caption)
-
-    if selected_type == "bill":
+    try:
         if not image_b64_list:
             message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
             return
@@ -385,6 +411,19 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "TÊN POS": result.get("ten_may_pos"),
                 "PHÍ DV": caption['tien_phi'],
             }
+            invoice_key = generate_invoice_key_simple(result, caption)
+            
+            if redis.is_duplicate(invoice_key):
+                message.reply_text(
+                    f"🚫 Hóa đơn đã được gửi trước đó:\n"
+                    f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
+                    f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
+                    f"• Số lô: `{result.get('so_lo')}`\n"
+                    f"• Khách: *{caption.get('khach', 'Không rõ')}*",
+                    parse_mode="Markdown"
+                )
+                return
+            redis.mark_processed(invoice_key)
             if result.get("so_hoa_don") is not None:
                 list_data.append(data)
                 insert_bill_row(db, row)
@@ -426,7 +465,8 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             reply_msg = "⚠️ Không xử lý được hóa đơn nào."
 
         message.reply_text(reply_msg)
-
+    except Exception as e:
+        message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí" + str(e))
 
 def insert_bill_row(db, row):
     query = """
