@@ -13,14 +13,15 @@ db = MySQLConnector(
 )
 def start_menu(update, context):
     print("📥 Nhận lệnh /menu")
+    
     search_keyboard = [
         [
-            InlineKeyboardButton("👤 Tên khách", callback_data='search_khach'),
-            InlineKeyboardButton("📞 SĐT", callback_data='search_sdt')
+            InlineKeyboardButton("👤 Tên khách", callback_data='menu_search_khach'),
+            InlineKeyboardButton("📞 SĐT", callback_data='menu_search_sdt')
         ],
         [
-            InlineKeyboardButton("🧾 Số lô", callback_data='search_so_lo'),
-            InlineKeyboardButton("🧾 Số hoá đơn", callback_data='search_so_hoa_don')
+            InlineKeyboardButton("🧾 Số lô", callback_data='menu_search_so_lo'),
+            InlineKeyboardButton("🧾 Số hoá đơn", callback_data='menu_search_so_hoa_don')
         ]
     ]
     reply_markup = InlineKeyboardMarkup(search_keyboard)
@@ -32,24 +33,24 @@ def handle_button_click(update, context):
 
 
     # Xử lý chọn kiểu tra cứu
-    if query.data == 'search_khach':
+    if query.data == 'menu_search_khach':
 
         query.edit_message_text(f"🔎 Nhập tên khách cần tìm trong bảng:", parse_mode="Markdown")
         context.user_data['search_mode'] = 'khach'
 
     # Xử lý chọn kiểu tra cứu
-    elif query.data == 'search_sdt':
+    elif query.data == 'menu_search_sdt':
         
         query.edit_message_text(f"🔎 Nhập SĐT cần tìm trong bảng:", parse_mode="Markdown")
         context.user_data['search_mode'] = 'sdt'
 
-    elif query.data == 'search_so_lo':
+    elif query.data == 'menu_search_so_lo':
         
         query.edit_message_text(f"🔎 Nhập số lô cần tìm trong bảng:", parse_mode="Markdown")
         context.user_data['search_mode'] = 'so_lo'
         
     # Xử lý chọn kiểu tra cứu
-    elif query.data == 'search_so_hoa_don':
+    elif query.data == 'menu_search_so_hoa_don':
         
         query.edit_message_text(f"🔎 Nhập số hóa đơn cần tìm:", parse_mode="Markdown")
         context.user_data['search_mode'] = 'so_hoa_don'
@@ -138,5 +139,5 @@ def format_results(results):
     return "\n".join(lines)
 def register_menu_handlers(dp):
     dp.add_handler(CommandHandler("menu", start_menu))
-    dp.add_handler(CallbackQueryHandler(handle_button_click))
+    dp.add_handler(CallbackQueryHandler(handle_button_click, pattern='^menu_'))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_text_search))

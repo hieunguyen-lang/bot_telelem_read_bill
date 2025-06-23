@@ -36,7 +36,7 @@ class GeminiBillAnalyzer:
             print("Không thể chuyển đổi hình ảnh.")
             return None
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash') # Sử dụng model vision cho input hình ảnh
+            model = genai.GenerativeModel('gemini-2.0-flash') # Sử dụng model vision cho input hình ảnh
             invoice_extraction_prompt = """
             Bạn là một chuyên gia phân tích hóa đơn tài chính. Hãy phân tích hình ảnh hóa đơn được cung cấp và trích xuất các thông tin sau vào định dạng JSON. Nếu một trường không xuất hiện hoặc không thể xác định rõ ràng từ hóa đơn, hãy gán giá trị null cho trường đó.
             **YÊU CẦU QUAN TRỌNG:**
@@ -63,7 +63,7 @@ class GeminiBillAnalyzer:
             8. "so_tham_chieu":  
             Số tham chiếu. Tìm nhãn như: "Số tham chiếu:", "REF:", "TRACE No:", "SỐ HÓA ĐƠN:", "REFERENCE:".
             9. "so_hoa_don":  
-            Số hóa đơn hoặc mã giao dịch cụ thể. Tìm nhãn như: "Số hóa đơn:", "SỐ HÓA ĐƠN:", "SỐ H.ĐƠN:", "Số giao dịch:", "Transaction ID:", "Receipt No:", "Hóa đơn số:", kể cả khi viết hoa toàn bộ,Hãy cố gắng nhận dạng cả những trường hợp `SỐ HÓA ĐƠN` viết hoa, có thể nằm ở dòng giữa hoặc cuối hóa đơn".
+            Số hóa đơn hoặc mã giao dịch cụ thể. Tìm nhãn như: "Số hóa đơn:", "SỐ HÓA ĐƠN:", ". H.ĐƠN:", "Số giao dịch:", "Transaction ID:", "Receipt No:", "Hóa đơn số:", kể cả khi viết hoa toàn bộ,Hãy cố gắng nhận dạng cả những trường hợp `SỐ HÓA ĐƠN` viết hoa, có thể nằm ở dòng giữa hoặc cuối hóa đơn".
             10. "loai_giao_dich":  
             Loại giao dịch, ví dụ: "Thanh Toán", "Rút Tiền", "Hoàn Tiền", "Kết Toán",... Nếu không có, để null.
             11. "ten_may_pos":  

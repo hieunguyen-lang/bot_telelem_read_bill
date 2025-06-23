@@ -201,12 +201,13 @@ def handle_photo(update, context):
 def append_multiple_by_headers(sheet, data_dict_list):
     headers = sheet.row_values(1)
 
-    # ⚠️ Chỉ dòng đầu có giá trị 'KẾT TOÁN'
+    # ⚠️ Gán lại KẾT TOÁN nếu có, chỉ dòng đầu có giá trị
     if data_dict_list and "KẾT TOÁN" in data_dict_list[0]:
         value = data_dict_list[0]["KẾT TOÁN"]
         for i, item in enumerate(data_dict_list):
             item["KẾT TOÁN"] = value if i == 0 else ""
 
+    # Chuẩn bị dữ liệu theo headers
     rows_to_append = []
     for data_dict in data_dict_list:
         row_data = [""] * len(headers)
@@ -218,17 +219,22 @@ def append_multiple_by_headers(sheet, data_dict_list):
                 row_data[i] = str(value)
         rows_to_append.append(row_data)
 
-    if rows_to_append:
-        start_row = len(sheet.get_all_values()) + 1
-        sheet.append_rows(rows_to_append, value_input_option="USER_ENTERED")
-        end_row = start_row + len(rows_to_append) - 1
+    print("📌 Số dòng cần ghi:", len(rows_to_append))
+    if not rows_to_append:
+        print("⚠️ Không có dữ liệu để ghi.")
+        return
 
-        if "KẾT TOÁN" in headers and end_row > start_row:
-            col_idx = headers.index("KẾT TOÁN") + 1
-            sheet.merge_cells(start_row, col_idx, end_row, col_idx)
+    # ✅ Ghi dữ liệu đơn giản, không merge
+    sheet.append_rows(rows_to_append, value_input_option="USER_ENTERED")
+    print(f"✅ Đã ghi {len(rows_to_append)} dòng vào Google Sheet.")
 
-        print(f"✅ Đã ghi và gộp {len(rows_to_append)} dòng vào Google Sheet.")
-    
+
+def format_currency_vn(value):
+    try:
+        return f"{int(value):,}".replace(",", ".")
+    except:
+        return value  # fallback nếu lỗi
+   
 def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
     full_name = message.from_user.username
@@ -280,7 +286,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "HỌ VÀ TÊN KHÁCH": caption['khach'],
                 "SĐT KHÁCH": caption['sdt'],
                 "ĐÁO / RÚT": "Đáo",
-                "SỐ TIỀN": result.get("tong_so_tien"),
+                "SỐ TIỀN": format_currency_vn(result.get("tong_so_tien")),
                 "KẾT TOÁN": "kết toán",
                 "SỐ THẺ THẺ ĐÁO / RÚT": result.get("so_the"),
                 "TID": result.get("tid"),
@@ -298,7 +304,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 res_mess.append(
                     f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
                     f"👤 {caption['khach']} - "
-                    f"💰 {result.get('tong_so_tien') or '?'} - "
+                    f"💰 {format_currency_vn(result.get('tong_so_tien')) or '?'} - "
                     f"💰 {result.get('tid') or '?'} - "
                     f"📄 {result.get('so_hoa_don') or ''} - "
                     f"🧾 {result.get('so_lo') or ''} - "
@@ -307,18 +313,19 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             
         for item in list_data:
             item["KẾT TOÁN"] = sum
-            # Xác định sheet theo ngân hàng
-            if ten_ngan_hang == "MB":
-                sheet = spreadsheet.worksheet("MB Bank")
-            elif ten_ngan_hang == "HDBank":
-                sheet = spreadsheet.worksheet("HD Bank")
-            elif ten_ngan_hang == "VPBank":
-                sheet = spreadsheet.worksheet("VP Bank")
-            elif ten_ngan_hang is None:
-                sheet = spreadsheet.worksheet("MPOS")
-            else:
-                sheet = spreadsheet.worksheet("Unknown")
-            # Ghi dữ liệu
+            
+            
+        # Xác định sheet theo ngân hàng
+        if ten_ngan_hang == "MB":
+            sheet = spreadsheet.worksheet("MB Bank")
+        elif ten_ngan_hang == "HDBank":
+            sheet = spreadsheet.worksheet("HD Bank")
+        elif ten_ngan_hang == "VPBank":
+            sheet = spreadsheet.worksheet("VP Bank")
+        elif ten_ngan_hang is None:
+            sheet = spreadsheet.worksheet("MPOS")
+        else:
+            sheet = spreadsheet.worksheet("Unknown")
         append_multiple_by_headers(sheet, list_data)
         db.close()
         if res_mess:
@@ -380,7 +387,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "HỌ VÀ TÊN KHÁCH": caption['khach'],
                 "SĐT KHÁCH": caption['sdt'],
                 "ĐÁO / RÚT": "Rút",
-                "SỐ TIỀN": result.get("tong_so_tien"),
+                "SỐ TIỀN": format_currency_vn(result.get("tong_so_tien")),
                 "KẾT TOÁN": "kết toán",
                 "SỐ THẺ THẺ ĐÁO / RÚT": result.get("so_the"),
                 "TID": result.get("tid"),
@@ -399,7 +406,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 res_mess.append(
                     f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
                     f"👤 {caption['khach']} - "
-                    f"💰 {result.get('tong_so_tien') or '?'} - "
+                    f"💰 {format_currency_vn(result.get('tong_so_tien')) or '?'} - "
                     f"💰 {result.get('tid') or '?'} - "
                     f"📄 {result.get('so_hoa_don') or ''} - "
                     f"🧾 {result.get('so_lo') or ''} - "
@@ -409,25 +416,19 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             item["KẾT TOÁN"] = sum
             # Ghi dữ liệu
             # Xác định sheet theo ngân hàng
-            if ten_ngan_hang == "MB":
-                sheet = spreadsheet.worksheet("MB Bank")
-                
-
-            elif ten_ngan_hang == "HDBank":
-                sheet = spreadsheet.worksheet("HD Bank")
-                
-
-            elif ten_ngan_hang == "VPBank":
-                sheet = spreadsheet.worksheet("VP Bank")
-                
-
-            elif ten_ngan_hang is None:
-                sheet = spreadsheet.worksheet("MPOS")
-                
-
-            else:
-                sheet = spreadsheet.worksheet("Unknown")
-        append_multiple_by_headers(sheet, list_data)
+        # Xác định sheet theo ngân hàng
+        if ten_ngan_hang == "MB":
+            sheet = spreadsheet.worksheet("MB Bank")
+        elif ten_ngan_hang == "HDBank":
+            sheet = spreadsheet.worksheet("HD Bank")
+        elif ten_ngan_hang == "VPBank":
+            sheet = spreadsheet.worksheet("VP Bank")
+        elif ten_ngan_hang is None:
+            sheet = spreadsheet.worksheet("MPOS")
+        else:
+            sheet = spreadsheet.worksheet("Unknown")
+        append_multiple_by_headers(sheet, list_data)   
+        
 
 
         db.close()
