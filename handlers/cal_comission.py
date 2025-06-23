@@ -9,8 +9,8 @@ load_dotenv()
 
 # Kết nối DB
 db = MySQLConnector(
-    host="localhost",
-    user="root",
+    host=os.getenv("MYSQL_HOST"),
+    user=os.getenv("MYSQL_USER"),
     password=os.getenv("MYSQL_ROOT_PASSWORD"),
     database=os.getenv("MYSQL_DATABASE")
 )

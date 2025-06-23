@@ -37,8 +37,8 @@ client = gspread.authorize(creds)
 print("🔑 GEMINI_API_KEY:", repr(GEMINI_API_KEY))
 analyzer = GeminiBillAnalyzer(api_key=GEMINI_API_KEY)
 db = MySQLConnector(
-    host="localhost",
-    user='root',
+    host=os.getenv("MYSQL_HOST"),
+    user=os.getenv("MYSQL_USER"),
     password=os.getenv("MYSQL_ROOT_PASSWORD"),
     database=os.getenv("MYSQL_DATABASE")
 )

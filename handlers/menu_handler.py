@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 load_dotenv()
 db = MySQLConnector(
-    host="localhost",
-    user='root',
+    host=os.getenv("MYSQL_HOST"),
+    user=os.getenv("MYSQL_USER"),
     password=os.getenv("MYSQL_ROOT_PASSWORD"),
     database=os.getenv("MYSQL_DATABASE")
 )
