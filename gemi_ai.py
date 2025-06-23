@@ -110,7 +110,7 @@ class GeminiBillAnalyzer:
             ]
 
             print("Đang gửi yêu cầu đến Gemini API...")
-            response = self.model.generate_content(contents)
+            response = await self.model.generate_content_async(contents)
 
             print(response.text)
            

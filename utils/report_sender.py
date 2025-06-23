@@ -1,8 +1,8 @@
 from telegram import Bot
 from datetime import datetime
 import os
-from mysql_db_connector import MySQLConnector
-db = MySQLConnector(
+from mysql_db_connector import AsyncMySQLConnector
+db = AsyncMySQLConnector(
     host="localhost",
     user='root',
     password=os.getenv("MYSQL_ROOT_PASSWORD"),

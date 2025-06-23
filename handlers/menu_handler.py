@@ -1,13 +1,13 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
-from mysql_db_connector import MySQLConnector
+from mysql_db_connector import AsyncMySQLConnector
 import os
 from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
 
-db = MySQLConnector(
+db = AsyncMySQLConnector(
     host="localhost",
     user='root',
     password=os.getenv("MYSQL_ROOT_PASSWORD"),

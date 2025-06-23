@@ -1,67 +1,62 @@
-import mysql.connector
-from mysql.connector import Error
+import aiomysql
+import asyncio
 
-class MySQLConnector:
+class AsyncMySQLConnector:
     def __init__(self, host="localhost", user="root", password="", database="test_db", port=3306):
         self.config = {
             "host": host,
             "user": user,
             "password": password,
-            "database": database,
-            "port": port
+            "db": database,
+            "port": port,
+            "autocommit": True
         }
-        self.connection = None
-        self.cursor = None
-        self.connect()
+        self.pool = None
 
-    def connect(self):
-        try:
-            self.connection = mysql.connector.connect(**self.config)
-            self.cursor = self.connection.cursor(dictionary=True)
-            print("✅ Kết nối MySQL thành công.")
-        except Error as e:
-            print("❌ Lỗi kết nối MySQL:", e)
-            self.connection = None
-            self.cursor = None
+    async def connect(self):
+        if not self.pool:
+            try:
+                self.pool = await aiomysql.create_pool(**self.config)
+                print("✅ Kết nối MySQL (async) thành công.")
+            except Exception as e:
+                print("❌ Lỗi kết nối MySQL:", e)
 
-    def ensure_connection(self):
-        if self.connection is None or not self.connection.is_connected():
-            print("🔁 Reconnecting to MySQL...")
-            self.connect()
+    async def execute(self, query, params=None):
+        await self.connect()
+        async with self.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                try:
+                    await cur.execute(query, params)
+                    await conn.commit()
+                    return cur.rowcount
+                except Exception as e:
+                    print("❌ Lỗi khi thực thi:", e)
+                    return None
 
-    def execute(self, query, params=None):
-        self.ensure_connection()
-        try:
-            self.cursor.execute(query, params)
-            self.connection.commit()
-            return self.cursor.rowcount
-        except Error as e:
-            print("❌ Lỗi khi thực thi:", e)
-            return None
+    async def fetchone(self, query, params=None):
+        await self.connect()
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                try:
+                    await cur.execute(query, params)
+                    return await cur.fetchone()
+                except Exception as e:
+                    print("❌ Lỗi fetchone:", e)
+                    return None
 
-    def fetchone(self, query, params=None):
-        self.ensure_connection()
-        try:
-            self.cursor.execute(query, params)
-            return self.cursor.fetchone()
-        except Error as e:
-            print("❌ Lỗi fetchone:", e)
-            return None
+    async def fetchall(self, query, params=None):
+        await self.connect()
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                try:
+                    await cur.execute(query, params)
+                    return await cur.fetchall()
+                except Exception as e:
+                    print("❌ Lỗi fetchall:", e)
+                    return []
 
-    def fetchall(self, query, params=None):
-        self.ensure_connection()
-        try:
-            self.cursor.execute(query, params)
-            return self.cursor.fetchall()
-        except Error as e:
-            print("❌ Lỗi fetchall:", e)
-            return []
-
-    def close(self):
-        if self.cursor:
-            self.cursor.close()
-        if self.connection:
-            self.connection.close()
+    async def close(self):
+        if self.pool:
+            self.pool.close()
+            await self.pool.wait_closed()
             print("✅ Đã đóng kết nối MySQL.")
-        self.cursor = None
-        self.connection = None

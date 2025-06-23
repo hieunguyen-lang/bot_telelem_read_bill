@@ -10,7 +10,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 # from telegram.ext import Updater, MessageHandler, Filters
 from io import BytesIO
 from gemi_ai import GeminiBillAnalyzer
-from mysql_db_connector import MySQLConnector
+from mysql_db_connector import AsyncMySQLConnector
 import  asyncio
 from concurrent.futures import ThreadPoolExecutor
 
@@ -34,7 +34,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_name("your-creds.json", scop
 client = gspread.authorize(creds)
 print("🔑 GEMINI_API_KEY:", repr(GEMINI_API_KEY))
 analyzer = GeminiBillAnalyzer(api_key=GEMINI_API_KEY)
-db = MySQLConnector(
+db = AsyncMySQLConnector(
     host="localhost",
     user='root',
     password=os.getenv("MYSQL_ROOT_PASSWORD"),
@@ -226,114 +226,111 @@ async def append_multiple_by_headers(sheet, data_dict_list):
 
         print(f"✅ Đã ghi và gộp {len(rows_to_append)} dòng vào Google Sheet.")
     
-async def handle_selection_dao(update, context, selected_type="bill", sheet_id=SHEET_RUT_ID):
+async def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
     full_name = message.from_user.username
     timestamp = message.date.strftime("%Y-%m-%d %H:%M:%S")
     image_b64_list = context.user_data.get("image_data", [])
-    caption = context.user_data.get("caption", "")
-
+    caption = context.user_data.get("caption", "")  # 👈 lấy caption
     print(f"Đang xử lý ảnh từ {full_name} ({message.from_user.id}) - {timestamp}")
     print(f"Caption: {caption}")
 
-    if selected_type != "bill" or not image_b64_list:
-        await message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
-        return
+    if selected_type == "bill":
+        if not image_b64_list:
+            await message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
+            return
+        res_mess = []  # Để lưu kết quả trả về từ từng ảnh
 
-    spreadsheet = client.open_by_key(sheet_id)
-    res_mess = []
-    data_per_sheet = {}
-    sum_total = 0
+        # Mở Google Sheet trước khi lặp
+        spreadsheet = client.open_by_key(sheet_id)
+        list_data=[]
+        list_row = []
+        sum=0
+        print("len:",str(len(image_b64_list)))
+        for img_b64 in image_b64_list:
+            print("Gửi ảnh đến LLM")
+            result = await asyncio.wait_for(analyzer.analyze_bill(img_b64), timeout=10)
+            print("Kết quả trả về: ", result)
+            #await asyncio.sleep(1.5)  # ✅ Không dùng time.sleep
+            if result is None:
+                continue
 
-    print("Tổng ảnh:", len(image_b64_list))
-
-    for idx, img_b64 in enumerate(image_b64_list, 1):
-        print(f"📤 Gửi ảnh {idx} đến LLM...")
-        try:
-            result = await asyncio.to_thread(analyzer.analyze_bill, img_b64)
-        except Exception as e:
-            print(f"❌ Lỗi gọi Gemini API: {e}")
-            continue
-
-        await asyncio.sleep(1.5)
-
-        if not result or result.get("so_hoa_don") is None:
-            print(f"⚠️ Không có kết quả từ ảnh {idx}")
-            continue
-
-        ten_ngan_hang = result.get("ten_ngan_hang")
-        sheet_name = {
-            "MB": "MB Bank",
-            "HDBank": "HD Bank",
-            "VPBank": "VP Bank",
-            None: "MPOS"
-        }.get(ten_ngan_hang, "Unknown")
-
-        row = [
-            timestamp,
-            full_name,
-            caption['khach'],
-            caption['sdt'],
-            "DAO",
-            result.get("ten_ngan_hang"),
-            result.get("ngay_giao_dich"),
-            result.get("gio_giao_dich"),
-            result.get("tong_so_tien"),
-            result.get("so_the"),
-            result.get("tid"),
-            result.get("so_lo"),
-            result.get("so_hoa_don"),
-            result.get("ten_may_pos"),
-            message.caption
-        ]
-
-        data = {
-            "NGÀY": timestamp,
-            "NGƯỜI GỬI": full_name,
-            "HỌ VÀ TÊN KHÁCH": caption['khach'],
-            "SĐT KHÁCH": caption['sdt'],
-            "ĐÁO / RÚT": "Đáo",
-            "SỐ TIỀN": result.get("tong_so_tien"),
-            "KẾT TOÁN": "kết toán",
-            "SỐ THẺ THẺ ĐÁO / RÚT": result.get("so_the"),
-            "TID": result.get("tid"),
-            "SỐ LÔ": result.get("so_lo"),
-            "SỐ HÓA ĐƠN": result.get("so_hoa_don"),
-            "GIỜ GIAO DỊCH": result.get("gio_giao_dich"),
-            "TÊN POS": result.get("ten_may_pos"),
-            "PHÍ DV": caption['tien_phi'],
-        }
-
-        data_per_sheet.setdefault(sheet_name, []).append(data)
-        await insert_bill_row(db, row)
-
-        sum_total += int(result.get("tong_so_tien") or 0)
-
-        res_mess.append(
-            f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
-            f"👤 {caption['khach']} - "
-            f"💰 {result.get('tong_so_tien') or '?'} - "
-            f"TID: {result.get('tid') or '?'} - "
-            f"📄 {result.get('so_hoa_don') or ''} - "
-            f"🧾 {result.get('so_lo') or ''} - "
-            f"🖥️ {result.get('ten_may_pos') or ''}"
-        )
-
-    # Ghi vào từng sheet
-    for sheet_name, list_data in data_per_sheet.items():
-        sheet = spreadsheet.worksheet(sheet_name)
+            ten_ngan_hang = result.get("ten_ngan_hang")
+            
+            row = [
+                timestamp,
+                full_name,
+                caption['khach'],
+                caption['sdt'],
+                "DAO",
+                result.get("ten_ngan_hang"),
+                result.get("ngay_giao_dich"),
+                result.get("gio_giao_dich"),
+                result.get("tong_so_tien"),
+                result.get("so_the"),
+                result.get("tid"),
+                result.get("so_lo"),
+                result.get("so_hoa_don"),    
+                result.get("ten_may_pos"),
+                message.caption
+            ]
+        
+            data = {
+                "NGÀY": timestamp,
+                "NGƯỜI GỬI": full_name,
+                "HỌ VÀ TÊN KHÁCH": caption['khach'],
+                "SĐT KHÁCH": caption['sdt'],
+                "ĐÁO / RÚT": "Đáo",
+                "SỐ TIỀN": result.get("tong_so_tien"),
+                "KẾT TOÁN": "kết toán",
+                "SỐ THẺ THẺ ĐÁO / RÚT": result.get("so_the"),
+                "TID": result.get("tid"),
+                "SỐ LÔ": result.get("so_lo"),
+                "SỐ HÓA ĐƠN": result.get("so_hoa_don"),
+                "GIỜ GIAO DỊCH": result.get("gio_giao_dich"),
+                "TÊN POS": result.get("ten_may_pos"),
+                "PHÍ DV": caption['tien_phi'],
+            }
+            if result.get("so_hoa_don") is not None:
+                list_data.append(data)
+                print("➡️ Chuẩn bị insert MySQL...")
+                await insert_bill_row(db, row)
+                print("✅ Đã insert xong")
+                sum += int(result.get("tong_so_tien") or 0)
+                # Lưu lại kết quả để in ra cuối
+                res_mess.append(
+                    f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
+                    f"👤 {caption['khach']} - "
+                    f"💰 {result.get('tong_so_tien') or '?'} - "
+                    f"💰 {result.get('tid') or '?'} - "
+                    f"📄 {result.get('so_hoa_don') or ''} - "
+                    f"🧾 {result.get('so_lo') or ''} - "
+                    f"🖥️ {result.get('ten_may_pos') or ''}"
+                )
+            
         for item in list_data:
-            item["KẾT TOÁN"] = sum_total
+            item["KẾT TOÁN"] = sum
+            # Xác định sheet theo ngân hàng
+            if ten_ngan_hang == "MB":
+                sheet = spreadsheet.worksheet("MB Bank")
+            elif ten_ngan_hang == "HDBank":
+                sheet = spreadsheet.worksheet("HD Bank")
+            elif ten_ngan_hang == "VPBank":
+                sheet = spreadsheet.worksheet("VP Bank")
+            elif ten_ngan_hang is None:
+                sheet = spreadsheet.worksheet("MPOS")
+            else:
+                sheet = spreadsheet.worksheet("Unknown")
+            # Ghi dữ liệu
         await append_multiple_by_headers(sheet, list_data)
+        db.close()
+        if res_mess:
+            reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+        else:
+            reply_msg = "⚠️ Không xử lý được hóa đơn nào."
 
-    db.close()
+        await message.reply_text(reply_msg)
 
-    if res_mess:
-        reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
-    else:
-        reply_msg = "⚠️ Không xử lý được hóa đơn nào."
-
-    await message.reply_text(reply_msg)
 
 async def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
@@ -357,8 +354,9 @@ async def handle_selection_rut(update, context, selected_type="bill",sheet_id=SH
         
         for img_b64 in image_b64_list:
             print("Gửi ảnh đến LLM")
-            result =  analyzer.analyze_bill(img_b64)
-            time.sleep(1.5)
+            result = await analyzer.analyze_bill(img_b64)
+            print("Gửi ảnh đến LLM")
+
             if result is None:
                 continue
             ten_ngan_hang = result.get("ten_ngan_hang")
@@ -447,7 +445,7 @@ async def handle_selection_rut(update, context, selected_type="bill",sheet_id=SH
         await message.reply_text(reply_msg)
 
 
-async def insert_bill_row(db, row):
+async def insert_bill_row(db: AsyncMySQLConnector, row):
     query = """
         INSERT INTO thong_tin_hoa_don (
             thoi_gian,
