@@ -1,6 +1,6 @@
 
 import base64
-
+import time
 import json
 import re
 import threading
@@ -11,8 +11,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 from io import BytesIO
 from gemi_ai import GeminiBillAnalyzer
 from mysql_db_connector import MySQLConnector
-
-
+import  asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 from dotenv import load_dotenv
 load_dotenv()  # Tự động tìm và load từ .env
@@ -133,68 +133,67 @@ async def handle_photo(update, context):
     media_group_id = message.media_group_id or f"single_{message.message_id}"
     user_id = message.from_user.id
 
-    # Tải ảnh trước (phải làm trước khi xử lý ảnh đơn)
-    file = message.photo[-1].get_file()
-    bio = BytesIO()
-    file.download(out=bio)
-    img_b64 = base64.b64encode(bio.getvalue()).decode("utf-8")
-    
-    
-    # 👉 Ảnh đơn → gán trực tiếp thành list
+    # Tải ảnh
+    try:
+        file = await message.photo[-1].get_file()
+        bio = BytesIO()
+        await file.download_to_memory(out=bio)
+        img_b64 = base64.b64encode(bio.getvalue()).decode("utf-8")
+    except Exception as e:
+        print(f"❌ Lỗi khi xử lý ảnh: {e}")
+        return
+
+    # 👉 Ảnh đơn
     if message.media_group_id is None:
-        parsed, error_msg = validate_caption(update,chat_id, message.caption)
+        parsed, error_msg = await validate_caption(update, chat_id, message.caption)
         if error_msg:
             return
 
         context.user_data["image_data"] = [img_b64]
         context.user_data["caption"] = parsed
-        # Gọi xử lý luôn (giả sử luôn là hóa đơn)
-        if str(chat_id) == GROUP_DAO_ID:
-           
-            await handle_selection_dao(update, context, selected_type="bill")
-            
-        elif str(chat_id) == GROUP_RUT_ID:
-        
-            handle_selection_rut(update, context, selected_type="bill")
 
+        if str(chat_id) == GROUP_DAO_ID:
+            await handle_selection_dao(update, context, selected_type="bill")
+        elif str(chat_id) == GROUP_RUT_ID:
+            await handle_selection_rut(update, context, selected_type="bill")
         return
-    
+
+    # 👉 Media group
     if media_group_id not in media_group_storage:
-        # Ảnh đầu tiên của media group → parse caption luôn
-        parsed, error_msg = validate_caption(update, chat_id, message.caption)
+        parsed, error_msg = await validate_caption(update, chat_id, message.caption)
         if error_msg:
             return
 
         media_group_storage[media_group_id] = {
             "images": [img_b64],
-            "timer": None,
-            "user_id": user_id,
-            "context": context,
+            "task": asyncio.create_task(
+                delayed_process_media_group(media_group_id, chat_id, update, context)
+            ),
             "caption": parsed
         }
     else:
-        # Các ảnh tiếp theo → chỉ cần thêm ảnh
+        # Ảnh tiếp theo đến → chỉ thêm ảnh, KHÔNG tạo lại task
         media_group_storage[media_group_id]["images"].append(img_b64)
 
-    # ✅ Dù là ảnh đầu hay tiếp theo → luôn reset lại timer
-    if media_group_storage[media_group_id]["timer"]:
-        media_group_storage[media_group_id]["timer"].cancel()
 
-    def process_media_group():
-        context.user_data["image_data"] = media_group_storage[media_group_id]["images"]
-        context.user_data["caption"] = media_group_storage[media_group_id]["caption"]
-        del media_group_storage[media_group_id]
+# ⏳ Xử lý media group sau khi chờ 3s
+async def delayed_process_media_group(media_group_id, chat_id, update, context):
+    try:
+        print(f"✅ Task xử lý media_group {media_group_id} đang chạy sau 5s...")
+        await asyncio.sleep(5)  # chờ gom ảnh xong
+        data = media_group_storage.pop(media_group_id)
+        context.user_data["image_data"] = data["images"]
+        context.user_data["caption"] = data["caption"]
+
         if str(chat_id) == GROUP_DAO_ID:
             print("Đây là group Đáo")
-            handle_selection_dao(update, context, selected_type="bill")
+            await handle_selection_dao(update, context, selected_type="bill")
         elif str(chat_id) == GROUP_RUT_ID:
             print("Đây là group Rút")
-            handle_selection_rut(update, context, selected_type="bill")
+            await handle_selection_rut(update, context, selected_type="bill")
 
-    timer = threading.Timer(3.0, process_media_group)
-    media_group_storage[media_group_id]["timer"] = timer
-    timer.start()
-
+    except asyncio.CancelledError:
+        print(f"⛔ Task xử lý media_group {media_group_id} bị hủy.")
 
 async def append_multiple_by_headers(sheet, data_dict_list):
     headers = sheet.row_values(1)
@@ -214,7 +213,7 @@ async def append_multiple_by_headers(sheet, data_dict_list):
                 row_data[i] = f'="{value}"'
             else:
                 row_data[i] = str(value)
-        await rows_to_append.append(row_data)
+        rows_to_append.append(row_data)
 
     if rows_to_append:
         start_row = len(sheet.get_all_values()) + 1
@@ -227,105 +226,114 @@ async def append_multiple_by_headers(sheet, data_dict_list):
 
         print(f"✅ Đã ghi và gộp {len(rows_to_append)} dòng vào Google Sheet.")
     
-async def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
+async def handle_selection_dao(update, context, selected_type="bill", sheet_id=SHEET_RUT_ID):
     message = update.message
     full_name = message.from_user.username
     timestamp = message.date.strftime("%Y-%m-%d %H:%M:%S")
     image_b64_list = context.user_data.get("image_data", [])
-    caption = context.user_data.get("caption", "")  # 👈 lấy caption
+    caption = context.user_data.get("caption", "")
+
     print(f"Đang xử lý ảnh từ {full_name} ({message.from_user.id}) - {timestamp}")
     print(f"Caption: {caption}")
 
-    if selected_type == "bill":
-        if not image_b64_list:
-            await message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
-            return
-        res_mess = []  # Để lưu kết quả trả về từ từng ảnh
+    if selected_type != "bill" or not image_b64_list:
+        await message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
+        return
 
-        # Mở Google Sheet trước khi lặp
-        spreadsheet = client.open_by_key(sheet_id)
-        list_data=[]
-        list_row = []
-        sum=0
-        for img_b64 in image_b64_list:
-            result = analyzer.analyze_bill(img_b64)
-            if result is None:
-                continue
+    spreadsheet = client.open_by_key(sheet_id)
+    res_mess = []
+    data_per_sheet = {}
+    sum_total = 0
 
-            ten_ngan_hang = result.get("ten_ngan_hang")
-            
-            row = [
-                timestamp,
-                full_name,
-                caption['khach'],
-                caption['sdt'],
-                "DAO",
-                result.get("ten_ngan_hang"),
-                result.get("ngay_giao_dich"),
-                result.get("gio_giao_dich"),
-                result.get("tong_so_tien"),
-                result.get("so_the"),
-                result.get("tid"),
-                result.get("so_lo"),
-                result.get("so_hoa_don"),    
-                result.get("ten_may_pos"),
-                message.caption
-            ]
-        
-            data = {
-                "NGÀY": timestamp,
-                "NGƯỜI GỬI": full_name,
-                "HỌ VÀ TÊN KHÁCH": caption['khach'],
-                "SĐT KHÁCH": caption['sdt'],
-                "ĐÁO / RÚT": "Đáo",
-                "SỐ TIỀN": result.get("tong_so_tien"),
-                "KẾT TOÁN": "kết toán",
-                "SỐ THẺ THẺ ĐÁO / RÚT": result.get("so_the"),
-                "TID": result.get("tid"),
-                "SỐ LÔ": result.get("so_lo"),
-                "SỐ HÓA ĐƠN": result.get("so_hoa_don"),
-                "GIỜ GIAO DỊCH": result.get("gio_giao_dich"),
-                "TÊN POS": result.get("ten_may_pos"),
-                "PHÍ DV": caption['tien_phi'],
-            }
-            if result.get("so_hoa_don") is not None:
-                list_data.append(data)
-                await insert_bill_row(db, row)
-                sum += int(result.get("tong_so_tien") or 0)
-                # Lưu lại kết quả để in ra cuối
-                res_mess.append(
-                    f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
-                    f"👤 {caption['khach']} - "
-                    f"💰 {result.get('tong_so_tien') or '?'} - "
-                    f"💰 {result.get('tid') or '?'} - "
-                    f"📄 {result.get('so_hoa_don') or ''} - "
-                    f"🧾 {result.get('so_lo') or ''} - "
-                    f"🖥️ {result.get('ten_may_pos') or ''}"
-                )
-            
+    print("Tổng ảnh:", len(image_b64_list))
+
+    for idx, img_b64 in enumerate(image_b64_list, 1):
+        print(f"📤 Gửi ảnh {idx} đến LLM...")
+        try:
+            result = await asyncio.to_thread(analyzer.analyze_bill, img_b64)
+        except Exception as e:
+            print(f"❌ Lỗi gọi Gemini API: {e}")
+            continue
+
+        await asyncio.sleep(1.5)
+
+        if not result or result.get("so_hoa_don") is None:
+            print(f"⚠️ Không có kết quả từ ảnh {idx}")
+            continue
+
+        ten_ngan_hang = result.get("ten_ngan_hang")
+        sheet_name = {
+            "MB": "MB Bank",
+            "HDBank": "HD Bank",
+            "VPBank": "VP Bank",
+            None: "MPOS"
+        }.get(ten_ngan_hang, "Unknown")
+
+        row = [
+            timestamp,
+            full_name,
+            caption['khach'],
+            caption['sdt'],
+            "DAO",
+            result.get("ten_ngan_hang"),
+            result.get("ngay_giao_dich"),
+            result.get("gio_giao_dich"),
+            result.get("tong_so_tien"),
+            result.get("so_the"),
+            result.get("tid"),
+            result.get("so_lo"),
+            result.get("so_hoa_don"),
+            result.get("ten_may_pos"),
+            message.caption
+        ]
+
+        data = {
+            "NGÀY": timestamp,
+            "NGƯỜI GỬI": full_name,
+            "HỌ VÀ TÊN KHÁCH": caption['khach'],
+            "SĐT KHÁCH": caption['sdt'],
+            "ĐÁO / RÚT": "Đáo",
+            "SỐ TIỀN": result.get("tong_so_tien"),
+            "KẾT TOÁN": "kết toán",
+            "SỐ THẺ THẺ ĐÁO / RÚT": result.get("so_the"),
+            "TID": result.get("tid"),
+            "SỐ LÔ": result.get("so_lo"),
+            "SỐ HÓA ĐƠN": result.get("so_hoa_don"),
+            "GIỜ GIAO DỊCH": result.get("gio_giao_dich"),
+            "TÊN POS": result.get("ten_may_pos"),
+            "PHÍ DV": caption['tien_phi'],
+        }
+
+        data_per_sheet.setdefault(sheet_name, []).append(data)
+        await insert_bill_row(db, row)
+
+        sum_total += int(result.get("tong_so_tien") or 0)
+
+        res_mess.append(
+            f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
+            f"👤 {caption['khach']} - "
+            f"💰 {result.get('tong_so_tien') or '?'} - "
+            f"TID: {result.get('tid') or '?'} - "
+            f"📄 {result.get('so_hoa_don') or ''} - "
+            f"🧾 {result.get('so_lo') or ''} - "
+            f"🖥️ {result.get('ten_may_pos') or ''}"
+        )
+
+    # Ghi vào từng sheet
+    for sheet_name, list_data in data_per_sheet.items():
+        sheet = spreadsheet.worksheet(sheet_name)
         for item in list_data:
-            item["KẾT TOÁN"] = sum
-            # Xác định sheet theo ngân hàng
-            if ten_ngan_hang == "MB":
-                sheet = spreadsheet.worksheet("MB Bank")
-            elif ten_ngan_hang == "HDBank":
-                sheet = spreadsheet.worksheet("HD Bank")
-            elif ten_ngan_hang == "VPBank":
-                sheet = spreadsheet.worksheet("VP Bank")
-            elif ten_ngan_hang is None:
-                sheet = spreadsheet.worksheet("MPOS")
-            else:
-                sheet = spreadsheet.worksheet("Unknown")
-            # Ghi dữ liệu
+            item["KẾT TOÁN"] = sum_total
         await append_multiple_by_headers(sheet, list_data)
-        db.close()
-        if res_mess:
-            reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
-        else:
-            reply_msg = "⚠️ Không xử lý được hóa đơn nào."
 
-        await message.reply_text(reply_msg)
+    db.close()
 
+    if res_mess:
+        reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+    else:
+        reply_msg = "⚠️ Không xử lý được hóa đơn nào."
+
+    await message.reply_text(reply_msg)
 
 async def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
@@ -348,7 +356,9 @@ async def handle_selection_rut(update, context, selected_type="bill",sheet_id=SH
         sum= 0
         
         for img_b64 in image_b64_list:
-            result = analyzer.analyze_bill(img_b64)
+            print("Gửi ảnh đến LLM")
+            result =  analyzer.analyze_bill(img_b64)
+            time.sleep(1.5)
             if result is None:
                 continue
             ten_ngan_hang = result.get("ten_ngan_hang")

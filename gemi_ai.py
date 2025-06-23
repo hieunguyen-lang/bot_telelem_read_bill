@@ -5,10 +5,11 @@ import google.generativeai as genai
 import json
 import os
 import re
+import asyncio
 class GeminiBillAnalyzer:
     def __init__(self, api_key=''):
         genai.configure(api_key=api_key)
-
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
     @staticmethod
     def image_to_base64(image_path):
         """
@@ -31,12 +32,13 @@ class GeminiBillAnalyzer:
             print(f"Lỗi khi chuyển đổi hình ảnh sang Base64: {e}")
             return None
 
-    def analyze_bill(self, base64_str):
+    async def analyze_bill(self, base64_str):
+        print("vao analyze_bill")
         if not base64_str:
             print("Không thể chuyển đổi hình ảnh.")
             return None
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash') # Sử dụng model vision cho input hình ảnh
+             # Sử dụng model vision cho input hình ảnh
             invoice_extraction_prompt = """
             Bạn là một chuyên gia phân tích hóa đơn tài chính. Hãy phân tích hình ảnh hóa đơn được cung cấp và trích xuất các thông tin sau vào định dạng JSON. Nếu một trường không xuất hiện hoặc không thể xác định rõ ràng từ hóa đơn, hãy gán giá trị null cho trường đó.
             **YÊU CẦU QUAN TRỌNG:**
@@ -108,7 +110,8 @@ class GeminiBillAnalyzer:
             ]
 
             print("Đang gửi yêu cầu đến Gemini API...")
-            response = model.generate_content(contents)
+            response = self.model.generate_content(contents)
+
             print(response.text)
            
 

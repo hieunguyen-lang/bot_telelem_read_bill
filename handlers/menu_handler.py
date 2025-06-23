@@ -93,8 +93,7 @@ def format_results(results):
             "-----------------------------"
         )
     return "\n".join(lines)
-
-def register_menu_handlers(application):
+async def register_menu_handlers(application):
     application.add_handler(CommandHandler("menu", start_menu))
     application.add_handler(CallbackQueryHandler(handle_button_click))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_search))
