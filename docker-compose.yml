@@ -4,11 +4,13 @@ services:
   telegram-bot:
     build: .
     container_name: telegram_bill_bot
+    depends_on:
+      - mysql
+      - redis
     volumes:
       - .:/app
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/app/your-creds.json
-      # - HTTPS_PROXY=http://yourproxy:port  # Bỏ comment nếu bạn cần proxy
     restart: unless-stopped
   mysql:
     image: mysql:8
