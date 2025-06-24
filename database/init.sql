@@ -20,5 +20,6 @@ CREATE TABLE IF NOT EXISTS thong_tin_hoa_don (
     so_hoa_don VARCHAR(100),
     ten_may_pos VARCHAR(100),
     lich_canh_bao VARCHAR(50),
+    tien_phi VARCHAR(50),
     caption_goc TEXT
 );

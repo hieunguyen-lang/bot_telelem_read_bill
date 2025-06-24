@@ -70,7 +70,7 @@ class GeminiBillAnalyzer:
             8. "so_tham_chieu":  
             Số tham chiếu. Tìm nhãn như: "Số tham chiếu:", "REF:", "TRACE No:", "SỐ HÓA ĐƠN:", "REFERENCE:".
             9. "so_hoa_don":  
-            Số hóa đơn hoặc mã giao dịch cụ thể. Tìm nhãn như: "Số hóa đơn:", "SỐ HÓA ĐƠN:", ". H.ĐƠN:", "Số giao dịch:", "Transaction ID:", "Receipt No:", "Hóa đơn số:", kể cả khi viết hoa toàn bộ,Hãy cố gắng nhận dạng cả những trường hợp `SỐ HÓA ĐƠN` viết hoa, có thể nằm ở dòng giữa hoặc cuối hóa đơn".
+            Số hóa đơn hoặc mã giao dịch cụ thể. Tìm nhãn như: "Số hóa đơn:", "SỐ HÓA ĐƠN:", ". H.ĐƠN:", "Số giao dịch:", "Transaction ID:", "Receipt No:", "Hóa đơn số:", "TRACE No/Số Hóa Đơn:" kể cả khi viết hoa toàn bộ,Hãy cố gắng nhận dạng cả những trường hợp `SỐ HÓA ĐƠN` viết hoa, có thể nằm ở dòng giữa hoặc cuối hóa đơn".
             10. "loai_giao_dich":  
             Loại giao dịch, ví dụ: "Thanh Toán", "Rút Tiền", "Hoàn Tiền", "Kết Toán",... Nếu không có, để null.
             11. "ten_may_pos":  
@@ -133,18 +133,70 @@ class GeminiBillAnalyzer:
                         return parsed
                     except json.JSONDecodeError as e:
                         print("❌ Không thể decode JSON:", e)
-                        return None
+                        return {
+                                "ten_ngan_hang": None,
+                                "ngay_giao_dich": None,
+                                "gio_giao_dich": None,
+                                "tong_so_tien":None,
+                                "tid": None,
+                                "mid": None,
+                                "so_lo": None,
+                                "so_tham_chieu": None,
+                                "so_hoa_don": None,
+                                "loai_giao_dich": None,
+                                "ten_may_pos": None,
+                                "so_the": None
+                                }
                 else:
                     print("⚠️ Không tìm thấy JSON trong phản hồi.")
-                    return None
+                    return {
+                        "ten_ngan_hang": None,
+                        "ngay_giao_dich": None,
+                        "gio_giao_dich": None,
+                        "tong_so_tien":None,
+                        "tid": None,
+                        "mid": None,
+                        "so_lo": None,
+                        "so_tham_chieu": None,
+                        "so_hoa_don": None,
+                        "loai_giao_dich": None,
+                        "ten_may_pos": None,
+                        "so_the": None
+                        }
                 
             except json.JSONDecodeError:
                 print("Lỗi: Phản hồi từ LLM không phải là JSON hợp lệ.")
-                return {"raw_text_response": response.text, "error": "Invalid JSON from LLM"}
+                return {
+                        "ten_ngan_hang": None,
+                        "ngay_giao_dich": None,
+                        "gio_giao_dich": None,
+                        "tong_so_tien":None,
+                        "tid": None,
+                        "mid": None,
+                        "so_lo": None,
+                        "so_tham_chieu": None,
+                        "so_hoa_don": None,
+                        "loai_giao_dich": None,
+                        "ten_may_pos": None,
+                        "so_the": None
+                        }
 
         except Exception as e:
             print(f"Lỗi khi gọi Gemini API: {e}")
-            return None
+            return {
+                        "ten_ngan_hang": None,
+                        "ngay_giao_dich": None,
+                        "gio_giao_dich": None,
+                        "tong_so_tien":None,
+                        "tid": None,
+                        "mid": None,
+                        "so_lo": None,
+                        "so_tham_chieu": None,
+                        "so_hoa_don": None,
+                        "loai_giao_dich": None,
+                        "ten_may_pos": None,
+                        "so_the": None
+                        }
 
 # Ví dụ sử dụng:
 # analyzer = GeminiBillAnalyzer(api_key="YOUR_API_KEY")

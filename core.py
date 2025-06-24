@@ -242,7 +242,34 @@ def format_currency_vn(value):
         return f"{int(value):,}".replace(",", ".")
     except:
         return value  # fallback nếu lỗi
-   
+
+def convert_human_currency_to_number(value):
+    """
+    Chuyển đổi các chuỗi dạng '8.070M', '8m', '300K', '300k' thành số nguyên.
+    Nếu giá trị là None hoặc không hợp lệ, trả về 0.
+    """
+    if not value or not isinstance(value, str):
+        return 0
+
+    value = value.strip().replace(",", "")
+
+    match = re.match(r'^([\d.]+)\s*([kKmM]?)$', value)
+    if not match:
+        return 0  # Trả về 0 nếu định dạng không hợp lệ
+
+    number, suffix = match.groups()
+    try:
+        number = float(number)
+    except ValueError:
+        return str(0)
+
+    if suffix.lower() == 'm':
+        return str(number * 1_000_000)
+    elif suffix.lower() == 'k':
+        return str(number * 1_000)
+    else:
+        return str(number)
+      
 def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
     full_name = message.from_user.username
@@ -271,8 +298,9 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             ten_ngan_hang = result.get("ten_ngan_hang")
             invoice_key = generate_invoice_key_simple(result, caption)
             duplicate = redis.is_duplicate(invoice_key)
-            duplicate = False
+            #duplicate = False
             if duplicate:
+                print("[DUPLICATE KEY]"+str(invoice_key))
                 message.reply_text(
                     f"🚫 Hóa đơn đã được gửi trước đó:\n"
                     f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
@@ -385,18 +413,24 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         list_data=[]
         print(len(image_b64_list), "ảnh cần xử lý")
         sum= 0
-        
+        ten_ngan_hang=None
         for img_b64 in image_b64_list:
             
             result = analyzer.analyze_bill(img_b64)
-            if result is None:
-                continue
+            print(result)
+           
+            if result.get("ten_ngan_hang") is None or result.get("so_hoa_don") is None:
+                    print(str(result.get("ten_ngan_hang")) + '-'+ str(result.get("so_hoa_don")))
+                    continue
+                
             ten_ngan_hang = result.get("ten_ngan_hang")
 
             invoice_key = generate_invoice_key_simple(result, caption)
             duplicate = redis.is_duplicate(invoice_key)
-            duplicate = False
+            #duplicate = False
+           
             if duplicate ==True:
+                print("[DUPLICATE KEY]"+str(invoice_key))
                 message.reply_text(
                     f"🚫 Hóa đơn đã được gửi trước đó:\n"
                     f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
@@ -430,6 +464,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("so_hoa_don"),    
                 result.get("ten_may_pos"),
                 caption['lich_canh_bao'],
+                convert_human_currency_to_number(caption['tien_phi']),
                 message.caption
             ]
               # Ghi vào MySQL
@@ -447,16 +482,15 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "SỐ HÓA ĐƠN": result.get("so_hoa_don"),
                 "GIỜ GIAO DỊCH": result.get("gio_giao_dich"),
                 "TÊN POS": result.get("ten_may_pos"),
-                "PHÍ DV": caption['tien_phi'],
+                "PHÍ DV": convert_human_currency_to_number(caption['tien_phi']),
             }
             
-            if result.get("so_hoa_don") is not None:
-                list_data.append(data)
-                insert_bill_row(db, row)
-                sum += int(result.get("tong_so_tien") or 0)
+            list_data.append(data)
+            insert_bill_row(db, row)
+            sum += int(result.get("tong_so_tien") or 0)
 
                 # Lưu lại kết quả để in ra cuối
-                res_mess.append(
+            res_mess.append(
                     f"🏦 {result.get('ten_ngan_hang') or 'MPOS'} - "
                     f"👤 {caption['khach']} - "
                     f"💰 {format_currency_vn(result.get('tong_so_tien')) or '?'} - "
@@ -464,23 +498,22 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                     f"📄 {result.get('so_hoa_don') or ''} - "
                     f"🧾 {result.get('so_lo') or ''} - "
                     f"🖥️ {result.get('ten_may_pos') or ''}"
-                )
+            )
             redis.mark_processed(invoice_key)
         for item in list_data:
             item["KẾT TOÁN"] = sum
-            # Ghi dữ liệu
-            # Xác định sheet theo ngân hàng
+
         # Xác định sheet theo ngân hàng
         if ten_ngan_hang == "MB":
-            sheet = spreadsheet.worksheet("MB Bank")
+                sheet = spreadsheet.worksheet("MB Bank")
         elif ten_ngan_hang == "HDBank":
-            sheet = spreadsheet.worksheet("HD Bank")
+                sheet = spreadsheet.worksheet("HD Bank")
         elif ten_ngan_hang == "VPBank":
-            sheet = spreadsheet.worksheet("VP Bank")
+                sheet = spreadsheet.worksheet("VP Bank")
         elif ten_ngan_hang is None:
-            sheet = spreadsheet.worksheet("MPOS")
+                sheet = spreadsheet.worksheet("MPOS")
         else:
-            sheet = spreadsheet.worksheet("Unknown")
+                sheet = spreadsheet.worksheet("Unknown")
         append_multiple_by_headers(sheet, list_data)   
         
 
@@ -493,6 +526,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
 
         message.reply_text(reply_msg)
     except Exception as e:
+       
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí" + str(e))
 
 def insert_bill_row(db, row):
@@ -514,8 +548,9 @@ def insert_bill_row(db, row):
             so_hoa_don,
             ten_may_pos,
             lich_canh_bao,
+            tien_phi,
             caption_goc
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s)
     """
     db.execute(query, row)
 
