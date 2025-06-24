@@ -35,7 +35,7 @@ scope = [
 creds = ServiceAccountCredentials.from_json_keyfile_name("your-creds.json", scope)
 client = gspread.authorize(creds)
 print("🔑 GEMINI_API_KEY:", repr(GEMINI_API_KEY))
-analyzer = GeminiBillAnalyzer(api_key=GEMINI_API_KEY)
+analyzer = GeminiBillAnalyzer()
 db = MySQLConnector(
     host=os.getenv("MYSQL_HOST"),
     user=os.getenv("MYSQL_USER"),
@@ -298,7 +298,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             
             invoice_key = generate_invoice_key_simple(result, ten_ngan_hang)
             duplicate = redis.is_duplicate(invoice_key)
-            #duplicate = False
+            duplicate = False
             if duplicate:
                 print("[DUPLICATE KEY]"+str(invoice_key))
                 message.reply_text(
@@ -448,7 +448,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 ten_ngan_hang = result.get("ten_ngan_hang")
             invoice_key = generate_invoice_key_simple(result, ten_ngan_hang)
             duplicate = redis.is_duplicate(invoice_key)
-            #duplicate = False
+            duplicate = False
            
             if duplicate ==True:
                 print("[DUPLICATE KEY]"+str(invoice_key))

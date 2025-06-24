@@ -1,137 +1,155 @@
-import base64
-from PIL import Image
-import io
-import google.generativeai as genai
-import json
 import os
+import json
 import re
-class GeminiBillAnalyzer:
-    def __init__(self, api_key=''):
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.0-flash') # Sử dụng model vision cho input hình ảnh
+from google import genai
+from google.genai import types
+from google.auth import default
+from google.auth.credentials import Credentials
 
-    @staticmethod
-    def image_to_base64(image_path):
-        """
-        Chuyển đổi hình ảnh từ đường dẫn file sang chuỗi Base64.
-        """
-        try:
-            with Image.open(image_path) as img:
-                # Chuyển đổi sang RGB nếu hình ảnh có chế độ khác (ví dụ: RGBA) để tránh lỗi với một số API
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
-                    
-                img_byte_arr = io.BytesIO()
-                img.save(img_byte_arr, format='JPEG') # Hoặc 'PNG' tùy thuộc vào định dạng mong muốn
-                encoded_img = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
-                return encoded_img
-        except FileNotFoundError:
-            print(f"Lỗi: Không tìm thấy file hình ảnh tại {image_path}")
-            return None
-        except Exception as e:
-            print(f"Lỗi khi chuyển đổi hình ảnh sang Base64: {e}")
-            return None
+
+class GeminiBillAnalyzer:
+    def __init__(self):
+        # Lấy thông tin xác thực mặc định từ môi trường (ADC - Application Default Credentials)
+        credentials, _ = default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        self.client = genai.Client(
+            vertexai=True,
+            project="e-caldron-463814-p7",
+            location="global",
+            credentials=credentials  
+        )
+        self.model = "gemini-2.5-flash"
 
     def analyze_bill(self, base64_str):
         if not base64_str:
             print("Không thể chuyển đổi hình ảnh.")
             return None
         try:
-            
             invoice_extraction_prompt = """
-            Bạn là một chuyên gia phân tích hóa đơn tài chính. Hãy phân tích hình ảnh hóa đơn được cung cấp và trích xuất các thông tin sau vào định dạng JSON. Nếu một trường không xuất hiện hoặc không thể xác định rõ ràng từ hóa đơn, hãy gán giá trị null cho trường đó
-            ❗ **LUÔN LUÔN ưu tiên**:
-            1. Nếu trên ảnh **xuất hiện đồng thời**:
-            - Một **hóa đơn POS** in dòng “SALE – THANH TOÁN” (hoặc tương đương),
-            - **VÀ** một **thẻ thanh toán** (card) – dù chụp mặt trước hay mặt sau, chỉ cần nhận biết đây là một chiếc thẻ (ví dụ thấy logo ngân hàng, chip, dải từ, hình dáng card)—
-            thì **luôn** coi đây là hóa đơn **“THANH TOÁN”** và thực hiện trích xuất.
-            
-            2. Nếu **không** có **đầy đủ cả hai** (hóa đơn POS + card), xem đây là hóa đơn **kết toán** (SETTLEMENT/KẾT TOÁN/báo cáo) hoặc báo cáo nội bộ, các trường cần trích xuất trả về `null`.
-            
-            3. ❌ Nếu là hóa đơn từ app ngân hàng (như Sacombank, Techcombank, VPBank...) chỉ chứa nội dung chuyển khoản thành công, không có thông tin POS, các trường cần trích xuất trả về `null`.
-            
-            Nếu đây là hóa đơn **“THANH TOÁN”**, hãy trích xuất các trường sau vào 1 đối tượng JSON:
-            **YÊU CẦU QUAN TRỌNG:**
-            - Tên các trường (keys) trong đối tượng JSON phải **chính xác** như liệt kê bên dưới.
-            - Nếu một trường không tìm thấy trên hóa đơn hoặc không rõ ràng, gán giá trị là `null`.
-            - Tất cả giá trị số tiền phải loại bỏ dấu phân cách hàng nghìn (chỉ dùng số, ví dụ: `"5020000"` thay vì `"5.020.000"`).
-            **Các trường cần trích xuất:**
-            1. "ten_ngan_hang":  
-            Tên ngân hàng phát hành hóa đơn, hoặc tên đơn vị chấp nhận thanh toán (ví dụ: "HDBank", "MB", "VPBank", "MPOS",...). Ưu tiên tên ngân hàng, nếu không có thì lấy tên thương hiệu thanh toán nổi bật.
-            2. "ngay_giao_dich":  
-            Ngày giao dịch, chuẩn hóa định dạng thành "YYYY-MM-DD". Tìm kiếm nhãn như: "Ngày:", "NGÀY:", "DATE:", "Ngày giao dịch:".
-            3. "gio_giao_dich":  
-            Giờ giao dịch, chuẩn hóa định dạng thành "HH:MM:SS". Tìm kiếm nhãn như: "Giờ:", "GIỜ:", "TIME:", "Giờ giao dịch:".
-            4. "tong_so_tien":  
-            Tổng số tiền giao dịch. Trả về giá trị dạng số, không có dấu phân cách hàng nghìn (ví dụ: "1250000").
-            5. "tid":  
-            Mã thiết bị POS. Tìm nhãn như: "TID:", "Terminal ID:", "Mã thiết bị:", "Mã POS:".  
-            **Lưu ý**: Nếu hóa đơn có dòng "MID/TIT: xxx/yyy", thì phần `yyy` (sau dấu `/`) là giá trị `tid`.
-            6. "mid":  
-            Mã đơn vị chấp nhận thẻ. Tìm nhãn như: "MID:", "Merchant ID:", "Mã ĐVCNT:", "Mã đơn vị:".  
-            **Lưu ý**: Nếu hóa đơn có dòng "MID/TIT: xxx/yyy", thì phần `xxx` (trước dấu `/`) là giá trị `mid`.
-            7. "so_lo":  
-            Số lô giao dịch. Tìm nhãn như: "Batch:", "BATCH:", "Số lô:", "Lô:".
-            8. "so_tham_chieu":  
-            Số tham chiếu. Tìm nhãn như: "Số tham chiếu:", "REF:", "TRACE No:", "SỐ HÓA ĐƠN:", "REFERENCE:".
-            9. "so_hoa_don":  
-            Số hóa đơn hoặc mã giao dịch cụ thể. Tìm nhãn như: "Số hóa đơn:", "SỐ HÓA ĐƠN:", ". H.ĐƠN:", "Số giao dịch:", "Transaction ID:", "Receipt No:", "Hóa đơn số:", "TRACE No/Số Hóa Đơn:" kể cả khi viết hoa toàn bộ,Hãy cố gắng nhận dạng cả những trường hợp `SỐ HÓA ĐƠN` viết hoa, có thể nằm ở dòng giữa hoặc cuối hóa đơn".
-            10. "loai_giao_dich":  
-            Loại giao dịch, ví dụ: "Thanh Toán", "Rút Tiền", "Hoàn Tiền", "Kết Toán",... Nếu không có, để null.
-            11. "ten_may_pos":  
-            Tên máy POS hoặc tên điểm giao dịch in trên hóa đơn, ví dụ: "XIXI GAMING 2", "GAS NGUYEN LONG 1",... Nếu không thấy, để null.
-            12. "so_the":  
-            Số thẻ được sử dụng để thanh toán, bao gồm cả phần bị ẩn. Tìm kiếm các chuỗi gồm 4 nhóm ký tự số, trong đó có thể có ký tự `*` thay thế một phần số, phân tách bằng dấu cách hoặc dấu gạch ngang (ví dụ: `"4413 57** **** 8787"`, `"5138-92**-****-2854"`). Có thể kèm ký hiệu `(C)` sau số thẻ.  
-            Nếu tìm thấy, chuẩn hóa kết quả về dạng `"XXXX XX** **** XXXX"` (sử dụng dấu cách).  
-            ❗ Nếu không thấy hoặc không chắc chắn, để `null`.
-            **YÊU CẦU ĐẦU RA:**
-            - Trả về đúng 1 đối tượng JSON chứa đầy đủ 12 trường trên.
-            - Không thêm giải thích hoặc văn bản nào khác ngoài đối tượng JSON.
-            - Đảm bảo JSON hợp lệ.
-            Ví dụ đầu ra:
-            {
-            "ten_ngan_hang": "HDBank",
-            "ngay_giao_dich": "2025-06-19",
-            "gio_giao_dich": "13:06:25",
-            "tong_so_tien": "50200000",
-            "tid": "54235423454",
-            "mid": "234234234",
-            "so_lo": "000820",
-            "so_tham_chieu": "517019445360",
-            "so_hoa_don": "000456",
-            "loai_giao_dich": "Thanh Toán",
-            "ten_may_pos": "XIXI GAMING 2",
-            "so_the": "4413 57** **** 8787"
-            }
+                🧠 Prompt AI Toàn Diện Trích Xuất Dữ Liệu Giao Dịch POS & MPOS
+
+                🎯 Bối cảnh:
+                Bạn là một trợ lý AI thông minh, chuyên trích xuất dữ liệu từ:
+
+                - Hóa đơn máy POS của ngân hàng HDBank, MB Bank, VPBank (in giấy).
+                - Ảnh màn hình "Chi tiết giao dịch" từ ứng dụng thanh toán MPOS tại Việt Nam.
+
+                🎯 Nhiệm vụ:
+                Phân tích hình ảnh được cung cấp và trích xuất thông tin vào định dạng JSON duy nhất bên dưới.
+
+                ❗ Yêu cầu bắt buộc:
+                1. Chỉ trả về đối tượng JSON hợp lệ.
+                2. Không chứa văn bản thừa, markdown, giải thích hay ghi chú.
+                3. Tất cả các trường phải có giá trị.
+                - Nếu không xác định được → trả về chuỗi rỗng "" (không được dùng null).
+
+                📤 Định dạng JSON đầu ra (bắt buộc):
+                {
+                "ten_ngan_hang": "string",
+                "ten_may_pos": "string",
+                "loai_giao_dich": "string",
+                "ngay_giao_dich": "YYYY-MM-DD",
+                "gio_giao_dich": "HH:MM:SS",
+                "tong_so_tien": "string",
+                "so_the": "string",
+                "tid": "string",
+                "mid": "string",
+                "so_lo": "string",
+                "so_hoa_don": "string",
+                "so_tham_chieu": "string"
+                }
+
+                🔍 Hướng dẫn trích xuất từng trường:
+
+                - ten_ngan_hang:
+                - POS Giấy: Nhận diện từ logo/tên ngân hàng ở đầu hóa đơn.
+                - MPOS: Nếu không có, trả về "".
+
+                - ten_may_pos:
+                - POS Giấy: Dưới logo, hoặc dòng chứa "TÊN ĐẠI LÝ:", "Cửa hàng:".
+                - MPOS: Để "MPOS".
+
+                - loai_giao_dich:
+                - POS Giấy: "THANH TOÁN", "SALE",... → chuẩn hóa thành "Thanh Toán".
+                - MPOS: "Thanh Toán".
+
+                - ngay_giao_dich:
+                - POS Giấy: Dòng "NGÀY/GIC", "NGÀY GIỜ", "Ngày:" → chuẩn "YYYY-MM-DD".
+                - MPOS: Dòng "Ngày giao dịch".
+
+                - gio_giao_dich:
+                - POS Giấy: Cùng dòng với ngày.
+                - MPOS: Dòng "Giờ giao dịch", định dạng HH:MM:SS.
+
+                - tong_so_tien:
+                - POS Giấy: Từ dòng "TỔNG TIỀN", "Tiền thực trả". Bỏ "đ", "VND", dấu ".".
+                - MPOS: Số in to nhất, đầu màn hình. Chuẩn hóa như trên.
+
+                - so_the:
+                - POS Giấy: Dòng có số thẻ dạng "**** **** **** 1234".
+                - MPOS: Dãy số che một phần, 4 số cuối.
+
+                - tid:
+                - POS Giấy: Dòng "TID:", hoặc phần sau trong dòng "Máy/Tid:".
+                - MPOS: Dòng "Mã thiết bị".
+
+                - mid:
+                - POS Giấy: Dòng "MID:", hoặc phần trước trong "Máy/Tid:".
+                - MPOS: Dòng "Mã ĐVCNT".
+
+                - so_lo:
+                - POS Giấy: Dòng "SỐ LÔ:", "BATCH No:".
+                - MPOS: Dòng "Số lô".
+
+                - so_hoa_don:
+                - POS Giấy: Dòng "SỐ H.ĐƠN:", "TRACE No:", "Mã giao dịch:".
+                - MPOS: Dòng "Mã giao dịch".
+
+                - so_tham_chieu:
+                - POS Giấy: Dòng "SỐ TC:", "REF No:", "Số tham chiếu:".
+                - MPOS: Dòng "Mã tham chiếu".
             """
 
-
-            # Tạo nội dung cho request, bao gồm hình ảnh và văn bản
             contents = [
-                {
-                    "parts": [
-                        {
-                            "mime_type": "image/jpeg", # Hoặc "image/png" tùy thuộc vào định dạng bạn đã lưu
-                            "data": base64_str
-                        },
-                        {
-                            "text": invoice_extraction_prompt
-                        }
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part(
+                            inline_data=types.Blob(
+                                mime_type="image/jpeg",
+                                data=base64_str
+                            )
+                        ),
+                        types.Part(text=invoice_extraction_prompt)
                     ]
-                }
+                )
             ]
 
-            print("Đang gửi yêu cầu đến Gemini API...")
-            response = self.model.generate_content(contents)
-            print(response.text)
-           
+            config = types.GenerateContentConfig(
+                temperature=1,
+                top_p=1,
+                seed=0,
+                max_output_tokens=4096,
+                safety_settings=[
+                    types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
+                    types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"),
+                    types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"),
+                    types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF")
+                ],
+                thinking_config=types.ThinkingConfig(thinking_budget=-1),
+            )
 
-            # Áp dụng regex TRÊN BIẾN NÀY (raw_llm_response_text)
-            
-            # Cố gắng phân tích phản hồi thành JSON
+            print("Đang gửi yêu cầu đến Gemini API...")
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=contents,
+                config=config
+            )
+
+            response_text = response.text if hasattr(response, 'text') else str(response)
+            print(response_text)
+
             try:
-                #json_data = json.loads(json_match.group(1))
-                json_match = re.search(r'```json\s*(\{.*?\})\s*```|(\{.*\})', response.text, re.DOTALL)
+                json_match = re.search(r'```json\s*(\{.*?\})\s*```|(\{.*\})', response_text, re.DOTALL)
                 if json_match:
                     raw_json = json_match.group(1) or json_match.group(2)
                     try:
@@ -140,90 +158,25 @@ class GeminiBillAnalyzer:
                         return parsed
                     except json.JSONDecodeError as e:
                         print("❌ Không thể decode JSON:", e)
-                        return {
-                                "ten_ngan_hang": None,
-                                "ngay_giao_dich": None,
-                                "gio_giao_dich": None,
-                                "tong_so_tien":None,
-                                "tid": None,
-                                "mid": None,
-                                "so_lo": None,
-                                "so_tham_chieu": None,
-                                "so_hoa_don": None,
-                                "loai_giao_dich": None,
-                                "ten_may_pos": None,
-                                "so_the": None
-                                }
                 else:
                     print("⚠️ Không tìm thấy JSON trong phản hồi.")
-                    return {
-                        "ten_ngan_hang": None,
-                        "ngay_giao_dich": None,
-                        "gio_giao_dich": None,
-                        "tong_so_tien":None,
-                        "tid": None,
-                        "mid": None,
-                        "so_lo": None,
-                        "so_tham_chieu": None,
-                        "so_hoa_don": None,
-                        "loai_giao_dich": None,
-                        "ten_may_pos": None,
-                        "so_the": None
-                        }
-                
             except json.JSONDecodeError:
                 print("Lỗi: Phản hồi từ LLM không phải là JSON hợp lệ.")
-                return {
-                        "ten_ngan_hang": None,
-                        "ngay_giao_dich": None,
-                        "gio_giao_dich": None,
-                        "tong_so_tien":None,
-                        "tid": None,
-                        "mid": None,
-                        "so_lo": None,
-                        "so_tham_chieu": None,
-                        "so_hoa_don": None,
-                        "loai_giao_dich": None,
-                        "ten_may_pos": None,
-                        "so_the": None
-                        }
 
         except Exception as e:
             print(f"Lỗi khi gọi Gemini API: {e}")
-            return {
-                        "ten_ngan_hang": None,
-                        "ngay_giao_dich": None,
-                        "gio_giao_dich": None,
-                        "tong_so_tien":None,
-                        "tid": None,
-                        "mid": None,
-                        "so_lo": None,
-                        "so_tham_chieu": None,
-                        "so_hoa_don": None,
-                        "loai_giao_dich": None,
-                        "ten_may_pos": None,
-                        "so_the": None
-                        }
 
-# Ví dụ sử dụng:
-# analyzer = GeminiBillAnalyzer(api_key="YOUR_API_KEY")
-# image_file = r"C:\Users\Admin\Documents\tool\bottele_check_bill\hdbank.jpg"
-# prompt = """
-# Phân tích thông tin từ hóa đơn này và trích xuất các thông tin sau vào định dạng JSON:
-# - "bank_name": Tên ngân hàng
-# - "merchant_name": Tên đơn vị chấp nhận thẻ
-# - "merchant_address": Địa chỉ đơn vị chấp nhận thẻ
-# - "transaction_date": Ngày giao dịch (định dạng YYYY-MM-DD)
-# - "transaction_time": Giờ giao dịch (định dạng HH:MM:SS)
-# - "total_amount": Tổng số tiền
-# - "currency": Loại tiền tệ (ví dụ: VND)
-# - "card_type": Loại thẻ (ví dụ: Mastercard)
-# - "transaction_id": ID giao dịch (TID)
-# - "merchant_id": ID đơn vị chấp nhận thẻ (MID)
-# - "batch_number": Số lô (Lô)
-# - "ivn": Số IVN (Internal Voucher Number)
-# Nếu một thông tin không có, hãy để giá trị là null.
-# """
-# result = analyzer.analyze_bill(image_file, prompt)
-# print(result)
-
+        return {
+            "ten_ngan_hang": None,
+            "ngay_giao_dich": None,
+            "gio_giao_dich": None,
+            "tong_so_tien": None,
+            "tid": None,
+            "mid": None,
+            "so_lo": None,
+            "so_tham_chieu": None,
+            "so_hoa_don": None,
+            "loai_giao_dich": None,
+            "ten_may_pos": None,
+            "so_the": None
+        }
