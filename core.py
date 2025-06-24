@@ -435,7 +435,8 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None:
                     print(str(result.get("ten_ngan_hang")) + '-'+ str(result.get("so_hoa_don")))
                     continue
-                
+            #if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
+
             if result.get("ten_ngan_hang") is None:
                 ten_ngan_hang="MPOS"
             else:

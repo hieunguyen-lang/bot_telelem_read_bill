@@ -40,12 +40,17 @@ class GeminiBillAnalyzer:
             
             invoice_extraction_prompt = """
             Bạn là một chuyên gia phân tích hóa đơn tài chính. Hãy phân tích hình ảnh hóa đơn được cung cấp và trích xuất các thông tin sau vào định dạng JSON. Nếu một trường không xuất hiện hoặc không thể xác định rõ ràng từ hóa đơn, hãy gán giá trị null cho trường đó
-            ❗ **Lưu ý quan trọng:**
-                - Nếu đây là hóa đơn chuyển tiền ngân hàng cá nhân (ví dụ như từ app ngân hàng Sacombank, Techcombank, VPBank,... mà chỉ chứa nội dung như “Giao dịch thành công”, “Chuyển khoản thành công”, “Người nhận”, “Mã giao dịch”, “Số tiền”, mà không có thông tin máy POS, MID/TID, mã số hóa đơn, số lô,…), thì đây **không phải là hóa đơn thanh toán POS**, hãy **trả về: `null`.
-                - Chỉ xử lý và trích xuất nếu hóa đơn là loại **"THANH TOÁN"**,**"SALE-THANH TOÁN"** POS thực sự.
-                - Nếu hóa đơn là loại: **"BÁO CÁO CHI TIẾT"**, **"BÁO CÁO KẾT TOÁN"**, **"KẾT TOÁN THÀNH CÔNG"**, **"TỔNG KẾT"**, **"KẾT TOÁN"** v.v... thì **không trích xuất gì cả, hãy trả về: `null`**.
-
-            Nếu hóa đơn là loại "THANH TOÁN" POS hợp lệ, hãy trích xuất các trường sau vào 1 đối tượng JSON:
+            ❗ **LUÔN LUÔN ưu tiên**:
+            1. Nếu trên ảnh **xuất hiện đồng thời**:
+            - Một **hóa đơn POS** in dòng “SALE – THANH TOÁN” (hoặc tương đương),
+            - **VÀ** một **thẻ thanh toán** (card) – dù chụp mặt trước hay mặt sau, chỉ cần nhận biết đây là một chiếc thẻ (ví dụ thấy logo ngân hàng, chip, dải từ, hình dáng card)—
+            thì **luôn** coi đây là hóa đơn **“THANH TOÁN”** và thực hiện trích xuất.
+            
+            2. Nếu **không** có **đầy đủ cả hai** (hóa đơn POS + card), xem đây là hóa đơn **kết toán** (SETTLEMENT/KẾT TOÁN/báo cáo) hoặc báo cáo nội bộ, các trường cần trích xuất trả về `null`.
+            
+            3. ❌ Nếu là hóa đơn từ app ngân hàng (như Sacombank, Techcombank, VPBank...) chỉ chứa nội dung chuyển khoản thành công, không có thông tin POS, các trường cần trích xuất trả về `null`.
+            
+            Nếu đây là hóa đơn **“THANH TOÁN”**, hãy trích xuất các trường sau vào 1 đối tượng JSON:
             **YÊU CẦU QUAN TRỌNG:**
             - Tên các trường (keys) trong đối tượng JSON phải **chính xác** như liệt kê bên dưới.
             - Nếu một trường không tìm thấy trên hóa đơn hoặc không rõ ràng, gán giá trị là `null`.
@@ -76,7 +81,9 @@ class GeminiBillAnalyzer:
             11. "ten_may_pos":  
             Tên máy POS hoặc tên điểm giao dịch in trên hóa đơn, ví dụ: "XIXI GAMING 2", "GAS NGUYEN LONG 1",... Nếu không thấy, để null.
             12. "so_the":  
-            Số thẻ được sử dụng để thanh toán, bao gồm cả phần bị ẩn. Tìm kiếm các chuỗi dạng như: `"4413 57** **** 8787"`, `"5138 **** **** 0890"` hoặc tương tự. Nếu không thấy, để null.
+            Số thẻ được sử dụng để thanh toán, bao gồm cả phần bị ẩn. Tìm kiếm các chuỗi gồm 4 nhóm ký tự số, trong đó có thể có ký tự `*` thay thế một phần số, phân tách bằng dấu cách hoặc dấu gạch ngang (ví dụ: `"4413 57** **** 8787"`, `"5138-92**-****-2854"`). Có thể kèm ký hiệu `(C)` sau số thẻ.  
+            Nếu tìm thấy, chuẩn hóa kết quả về dạng `"XXXX XX** **** XXXX"` (sử dụng dấu cách).  
+            ❗ Nếu không thấy hoặc không chắc chắn, để `null`.
             **YÊU CẦU ĐẦU RA:**
             - Trả về đúng 1 đối tượng JSON chứa đầy đủ 12 trường trên.
             - Không thêm giải thích hoặc văn bản nào khác ngoài đối tượng JSON.
@@ -116,7 +123,7 @@ class GeminiBillAnalyzer:
 
             print("Đang gửi yêu cầu đến Gemini API...")
             response = self.model.generate_content(contents)
-            #print(response.text)
+            print(response.text)
            
 
             # Áp dụng regex TRÊN BIẾN NÀY (raw_llm_response_text)
