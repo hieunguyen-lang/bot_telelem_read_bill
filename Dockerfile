@@ -11,4 +11,4 @@ COPY . /app
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Lệnh mặc định khi container start
-CMD ["python", "main.py"]
+CMD ["python", "-u", "main.py"]
