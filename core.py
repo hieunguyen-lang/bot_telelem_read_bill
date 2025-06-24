@@ -243,32 +243,31 @@ def format_currency_vn(value):
     except:
         return value  # fallback nếu lỗi
 
-def convert_human_currency_to_number(value):
+def convert_human_currency_to_number(value) -> str:
     """
-    Chuyển đổi các chuỗi dạng '8.070M', '8m', '300K', '300k' thành số nguyên.
-    Nếu giá trị là None hoặc không hợp lệ, trả về 0.
+    Nhận chuỗi như '8.070M', '300k', hoặc số, trả về chuỗi định dạng VN kiểu '8.070.000'.
+    Nếu không hợp lệ, trả về '0'.
     """
     if not value or not isinstance(value, str):
-        return 0
+        return "0"
 
     value = value.strip().replace(",", "")
-
     match = re.match(r'^([\d.]+)\s*([kKmM]?)$', value)
     if not match:
-        return 0  # Trả về 0 nếu định dạng không hợp lệ
+        return "0"
 
-    number, suffix = match.groups()
+    number_str, suffix = match.groups()
     try:
-        number = float(number)
+        number = float(number_str)
     except ValueError:
-        return str(0)
+        return "0"
 
     if suffix.lower() == 'm':
-        return str(number * 1_000_000)
+        number *= 1_000_000
     elif suffix.lower() == 'k':
-        return str(number * 1_000)
-    else:
-        return str(number)
+        number *= 1_000
+
+    return f"{int(number):,}".replace(",", ".")
       
 def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
