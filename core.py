@@ -303,7 +303,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 message.reply_text(
                     f"🚫 Hóa đơn đã được gửi trước đó:\n"
                     f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
-                    f"• Ngân hàng: `{result.get('ngan_hang')}`\n"
+                    f"• Ngân hàng: `{result.get('ten_ngan_hang')}`\n"
                     f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
                     f"• Số lô: `{result.get('so_lo')}`\n"
                     f"• TID: `{result.get('tid')}`\n"
@@ -433,7 +433,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 message.reply_text(
                     f"🚫 Hóa đơn đã được gửi trước đó:\n"
                     f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
-                    f"• Ngân hàng: `{result.get('ngan_hang')}`\n"
+                    f"• Ngân hàng: `{result.get('ten_ngan_hang')}`\n"
                     f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
                     f"• Số lô: `{result.get('so_lo')}`\n"
                     f"• TID: `{result.get('tid')}`\n"
