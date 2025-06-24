@@ -232,7 +232,7 @@ def generate_invoice_key_simple(result: dict, caption: dict) -> str:
         mid = result.get("mid", "").strip().lower()
         gio_giao_dich = result.get("gio_giao_dich", "").strip().lower()
         ngay_giao_dich = result.get("ngay_giao_dich", "").strip().lower()
-        ngan_hang = result.get("ngay_giao_dich", "").strip().lower()
+        ngan_hang = result.get("ten_ngan_hang", "").strip().lower()
         key = f"{so_hoa_don}_{so_lo}_{tid}_{mid}_{ngay_giao_dich}_{gio_giao_dich}_{ngan_hang}"
         return key
 
