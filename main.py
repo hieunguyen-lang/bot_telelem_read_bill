@@ -10,7 +10,7 @@ import pytz
 load_dotenv()  # Tự động tìm và load từ .env
 updater = Updater(
     token=os.getenv("TELEGRAM_TOKEN"),
-    request_kwargs={'proxy_url': os.getenv("PROXY_URL")}
+    #request_kwargs={'proxy_url': os.getenv("PROXY_URL")}
 )
 
 bot = updater.bot
