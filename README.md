@@ -34,3 +34,5 @@ docker exec mysql_bill /usr/bin/mysqldump -u root --password=root bill_data > "C
 AIzaSyAStkF_-lQrzja-CTXVvA__9vqVrPwsmTQ
 
 docker network create bill_network
+
+export GOOGLE_APPLICATION_CREDENTIALS="e-caldron-463814-p7-27bed851e8f4.json"

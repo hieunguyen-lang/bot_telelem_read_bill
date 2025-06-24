@@ -285,7 +285,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         tien_phi_int =convert_human_currency_to_number(caption['tien_phi'])
         for img_b64 in image_b64_list:
             result = analyzer.analyze_bill(img_b64)
-            if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None:
+            if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
                 print("Cả ten_ngan_hang và so_hoa_don None")
                 continue
             if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
@@ -439,7 +439,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             result = analyzer.analyze_bill(img_b64)
             print(result)
            
-            if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None:
+            if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
                 print("Cả ten_ngan_hang và so_hoa_don None")
                 continue
             if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
