@@ -295,7 +295,10 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None:
                     print(str(result.get("ten_ngan_hang")) + '-'+ str(result.get("so_hoa_don")))
                     continue
-
+            if result.get("ten_ngan_hang") is None:
+                ten_ngan_hang="MPOS"
+            else:
+                ten_ngan_hang = result.get("ten_ngan_hang")
             
             invoice_key = generate_invoice_key_simple(result, caption)
             duplicate = redis.is_duplicate(invoice_key)
@@ -305,7 +308,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 message.reply_text(
                     f"🚫 Hóa đơn đã được gửi trước đó:\n"
                     f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
-                    f"• Ngân hàng: `{result.get('ten_ngan_hang')}`\n"
+                    f"• Ngân hàng: `{ten_ngan_hang}`\n"
                     f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
                     f"• Số lô: `{result.get('so_lo')}`\n"
                     f"• TID: `{result.get('tid')}`\n"
@@ -323,7 +326,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 caption['khach'],
                 caption['sdt'],
                 "DAO",
-                result.get("ten_ngan_hang"),
+                ten_ngan_hang,
                 result.get("ngay_giao_dich"),
                 result.get("gio_giao_dich"),
                 result.get("tong_so_tien"),
@@ -360,7 +363,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 sum += int(result.get("tong_so_tien") or 0)
                 # Lưu lại kết quả để in ra cuối
                 res_mess.append(
-                    f"🏦 {result.get('ten_ngan_hang') or 'Không rõ'} - "
+                    f"🏦 {ten_ngan_hang or 'Không rõ'} - "
                     f"👤 {caption['khach']} - "
                     f"💰 {format_currency_vn(result.get('tong_so_tien')) or '?'} - "
                     f"💰 {result.get('tid') or '?'} - "
@@ -381,7 +384,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             sheet = spreadsheet.worksheet("HD Bank")
         elif ten_ngan_hang == "VPBank":
             sheet = spreadsheet.worksheet("VP Bank")
-        elif ten_ngan_hang is None:
+        elif ten_ngan_hang =="MPOS":
             sheet = spreadsheet.worksheet("MPOS")
         else:
             sheet = spreadsheet.worksheet("Unknown")
@@ -424,8 +427,10 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                     print(str(result.get("ten_ngan_hang")) + '-'+ str(result.get("so_hoa_don")))
                     continue
                 
-            ten_ngan_hang = result.get("ten_ngan_hang")
-
+            if result.get("ten_ngan_hang") is None:
+                ten_ngan_hang="MPOS"
+            else:
+                ten_ngan_hang = result.get("ten_ngan_hang")
             invoice_key = generate_invoice_key_simple(result, caption)
             duplicate = redis.is_duplicate(invoice_key)
             #duplicate = False
@@ -435,7 +440,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 message.reply_text(
                     f"🚫 Hóa đơn đã được gửi trước đó:\n"
                     f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
-                    f"• Ngân hàng: `{result.get('ten_ngan_hang')}`\n"
+                    f"• Ngân hàng: `{ten_ngan_hang}`\n"
                     f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
                     f"• Số lô: `{result.get('so_lo')}`\n"
                     f"• TID: `{result.get('tid')}`\n"
@@ -454,7 +459,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 caption['khach'],
                 caption['sdt'],
                 "DAO",
-                result.get("ten_ngan_hang"),
+                ten_ngan_hang,
                 result.get("ngay_giao_dich"),
                 result.get("gio_giao_dich"),
                 result.get("tong_so_tien"),
@@ -492,7 +497,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
 
                 # Lưu lại kết quả để in ra cuối
             res_mess.append(
-                    f"🏦 {result.get('ten_ngan_hang') or 'MPOS'} - "
+                    f"🏦 {ten_ngan_hang or 'MPOS'} - "
                     f"👤 {caption['khach']} - "
                     f"💰 {format_currency_vn(result.get('tong_so_tien')) or '?'} - "
                     f"💰 {result.get('tid') or '?'} - "
@@ -511,7 +516,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 sheet = spreadsheet.worksheet("HD Bank")
         elif ten_ngan_hang == "VPBank":
                 sheet = spreadsheet.worksheet("VP Bank")
-        elif ten_ngan_hang is None:
+        elif ten_ngan_hang == "MPOS":
                 sheet = spreadsheet.worksheet("MPOS")
         else:
                 sheet = spreadsheet.worksheet("Unknown")
