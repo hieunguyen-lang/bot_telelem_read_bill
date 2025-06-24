@@ -17,7 +17,7 @@ class GeminiBillAnalyzer:
             location="global",
             credentials=credentials  
         )
-        self.model = "gemini-2.5-flash"
+        self.model = "gemini-2.5-pro"
 
     def analyze_bill(self, base64_str):
         if not base64_str:
@@ -40,8 +40,8 @@ class GeminiBillAnalyzer:
                 1. Chỉ trả về đối tượng JSON hợp lệ.
                 2. Không chứa văn bản thừa, markdown, giải thích hay ghi chú.
                 3. Tất cả các trường phải có giá trị.
-                - Nếu không xác định được → trả về chuỗi rỗng "" (không được dùng null).
-
+                - Nếu một trường không tìm thấy trên hóa đơn hoặc không rõ ràng, gán giá trị là `null`.
+                - Tất cả giá trị số tiền phải loại bỏ dấu phân cách hàng nghìn (chỉ dùng số, ví dụ: `"5020000"` thay vì `"5.020.000"`).
                 📤 Định dạng JSON đầu ra (bắt buộc):
                 {
                 "ten_ngan_hang": "string",
@@ -62,7 +62,7 @@ class GeminiBillAnalyzer:
 
                 - ten_ngan_hang:
                 - POS Giấy: Nhận diện từ logo/tên ngân hàng ở đầu hóa đơn.
-                - MPOS: Nếu không có, trả về "".
+                - MPOS: Để "MPOS".
 
                 - ten_may_pos:
                 - POS Giấy: Dưới logo, hoặc dòng chứa "TÊN ĐẠI LÝ:", "Cửa hàng:".

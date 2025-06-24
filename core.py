@@ -373,7 +373,10 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             percent = float(caption['phi'].strip('%')) / 100
         except:
             percent=0
+
         cal_phi_dich_vu = sum * percent   
+        print(sum)
+        print(percent)
         print("cal_phi_dich_vu: ",cal_phi_dich_vu)
         if cal_phi_dich_vu != tien_phi_int:
             message.reply_text(
@@ -529,8 +532,9 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             percent=0
         cal_phi_dich_vu = int(sum * percent)
         print("cal_phi_dich_vu: ",cal_phi_dich_vu)
-        print(cal_phi_dich_vu)
-        print(tien_phi_int)
+        print(sum)
+        print(percent)
+        print("cal_phi_dich_vu: ",cal_phi_dich_vu)
         if cal_phi_dich_vu != tien_phi_int:
             message.reply_text(
                 f"❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
