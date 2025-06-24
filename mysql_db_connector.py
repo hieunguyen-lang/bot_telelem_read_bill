@@ -38,7 +38,18 @@ class MySQLConnector:
         except Error as e:
             print("❌ Lỗi khi thực thi:", e)
             return None
-
+        
+    def executemany(self, query, params_list):
+        self.ensure_connection()
+        try:
+            self.cursor.executemany(query, params_list)
+            self.connection.commit()
+            return self.cursor.rowcount
+        except Error as e:
+            print("❌ Lỗi khi thực thi nhiều dòng:", e)
+            self.connection.rollback()
+            return None
+        
     def fetchone(self, query, params=None):
         self.ensure_connection()
         try:

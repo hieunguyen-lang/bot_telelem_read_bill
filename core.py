@@ -250,31 +250,15 @@ def format_currency_vn(value):
     except:
         return str(0)  # fallback nếu lỗi
 
-def convert_human_currency_to_number(value) -> str:
+def convert_human_currency_to_number(s):
     """
-    Nhận chuỗi như '8.070M', '300k', hoặc số, trả về chuỗi định dạng VN kiểu '8.070.000'.
-    Nếu không hợp lệ, trả về '0'.
+    Chuyển đổi chuỗi tiền tệ như '1,776,510', '1.776.510 ₫', '1 776 510đ' thành số nguyên 1776510
     """
-    if not value or not isinstance(value, str):
-        return "0"
-
-    value = value.strip().replace(",", "")
-    match = re.match(r'^([\d.]+)\s*([kKmM]?)$', value)
-    if not match:
-        return "0"
-
-    number_str, suffix = match.groups()
-    try:
-        number = float(number_str)
-    except ValueError:
-        return "0"
-
-    if suffix.lower() == 'm':
-        number *= 1_000_000
-    elif suffix.lower() == 'k':
-        number *= 1_000
-
-    return f"{int(number):,}".replace(",", ".")
+    if not s:
+        return 0
+    # Xóa tất cả ký tự không phải số
+    cleaned = re.sub(r"[^\d]", "", s)
+    return int(cleaned) if cleaned else 0
       
 def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
@@ -294,14 +278,19 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         # Mở Google Sheet trước khi lặp
         spreadsheet = client.open_by_key(sheet_id)
         list_data=[]
-        list_row = []
+        print(len(image_b64_list), "ảnh cần xử lý")
+        list_row_insert_db = []
         sum=0
         ten_ngan_hang=None
+        tien_phi_int =convert_human_currency_to_number(caption['tien_phi'])
         for img_b64 in image_b64_list:
             result = analyzer.analyze_bill(img_b64)
             if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None:
-                    print(str(result.get("ten_ngan_hang")) + '-'+ str(result.get("so_hoa_don")))
-                    continue
+                print("Cả ten_ngan_hang và so_hoa_don None")
+                continue
+            if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
+                print("Đây là hóa đơn kết toán")
+                continue
             if result.get("ten_ngan_hang") is None:
                 ten_ngan_hang="MPOS"
             else:
@@ -345,7 +334,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("so_hoa_don"),    
                 result.get("ten_may_pos"),
                 caption['lich_canh_bao'],
-                convert_human_currency_to_number(caption['tien_phi']),
+                str(tien_phi_int),
                 message.caption
             ]
         
@@ -363,25 +352,35 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "SỐ HÓA ĐƠN": result.get("so_hoa_don"),
                 "GIỜ GIAO DỊCH": result.get("gio_giao_dich"),
                 "TÊN POS": result.get("ten_may_pos"),
-                "PHÍ DV": convert_human_currency_to_number(caption['tien_phi']),
+                "PHÍ DV": tien_phi_int,
             }
-            
-            if result.get("so_hoa_don") is not None:
-                list_data.append(data)
-                insert_bill_row(db, row)
-                sum += int(result.get("tong_so_tien") or 0)
-                # Lưu lại kết quả để in ra cuối
-                res_mess.append(
-                    f"🏦 {ten_ngan_hang or 'Không rõ'} - "
-                    f"👤 {caption['khach']} - "
-                    f"💰 {format_currency_vn(result.get('tong_so_tien')) or '?'} - "
-                    f"💰 {result.get('tid') or '?'} - "
-                    f"📄 {result.get('so_hoa_don') or ''} - "
-                    f"🧾 {result.get('so_lo') or ''} - "
-                    f"🖥️ {result.get('ten_may_pos') or ''}"
-                )
+
+            list_data.append(data)
+            list_row_insert_db.append(row)
+            sum += int(result.get("tong_so_tien") or 0)
+            # Lưu lại kết quả để in ra cuối
+            res_mess.append(
+                f"🏦 {ten_ngan_hang or 'Không rõ'} - "
+                f"👤 {caption['khach']} - "
+                f"💰 {format_currency_vn(result.get('tong_so_tien')) or '?'} - "
+                f"💰 {result.get('tid') or '?'} - "
+                f"📄 {result.get('so_hoa_don') or ''} - "
+                f"🧾 {result.get('so_lo') or ''} - "
+                f"🖥️ {result.get('ten_may_pos') or ''}"
+            )
             redis.mark_processed(invoice_key)
-            
+        try:
+            percent = float(caption['phi'].strip('%')) / 100
+        except:
+            percent=0
+        cal_phi_dich_vu = sum * percent   
+        print("cal_phi_dich_vu: ",cal_phi_dich_vu)
+        if cal_phi_dich_vu != tien_phi_int:
+            message.reply_text(
+                f"❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
+                f"👉 Phí đúng theo hệ thống là: `{cal_phi_dich_vu}`"
+            )
+            return
         for item in list_data:
             item["KẾT TOÁN"] = sum
             
@@ -397,7 +396,10 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             sheet = spreadsheet.worksheet("MPOS")
         else:
             sheet = spreadsheet.worksheet("Unknown")
+
+        insert_bill_rows(db,list_row_insert_db)
         append_multiple_by_headers(sheet, list_data)
+
         db.close()
         if res_mess:
             reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
@@ -406,7 +408,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
 
         message.reply_text(reply_msg)
     except Exception as e:
-        message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí" + str(e))
+        message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
 def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
@@ -425,18 +427,21 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         spreadsheet = client.open_by_key(sheet_id)
         list_data=[]
         print(len(image_b64_list), "ảnh cần xử lý")
+        list_row_insert_db = []
         sum= 0
         ten_ngan_hang=None
+        tien_phi_int =convert_human_currency_to_number(caption['tien_phi'])
         for img_b64 in image_b64_list:
             
             result = analyzer.analyze_bill(img_b64)
             print(result)
            
             if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None:
-                    print(str(result.get("ten_ngan_hang")) + '-'+ str(result.get("so_hoa_don")))
-                    continue
-            #if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
-
+                print("Cả ten_ngan_hang và so_hoa_don None")
+                continue
+            if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
+                print("Đây là hóa đơn kết toán")
+                continue
             if result.get("ten_ngan_hang") is None:
                 ten_ngan_hang="MPOS"
             else:
@@ -481,10 +486,11 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("so_hoa_don"),    
                 result.get("ten_may_pos"),
                 caption['lich_canh_bao'],
-                convert_human_currency_to_number(caption['tien_phi']),
+                str(tien_phi_int),
                 message.caption
             ]
               # Ghi vào MySQL
+            
             data = {
                 "NGÀY": timestamp,
                 "NGƯỜI GỬI": full_name,
@@ -499,11 +505,11 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "SỐ HÓA ĐƠN": result.get("so_hoa_don"),
                 "GIỜ GIAO DỊCH": result.get("gio_giao_dich"),
                 "TÊN POS": result.get("ten_may_pos"),
-                "PHÍ DV": convert_human_currency_to_number(caption['tien_phi']),
+                "PHÍ DV": tien_phi_int,
             }
             
             list_data.append(data)
-            insert_bill_row(db, row)
+            list_row_insert_db.append(row)
             sum += int(result.get("tong_so_tien") or 0)
 
                 # Lưu lại kết quả để in ra cuối
@@ -517,6 +523,20 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                     f"🖥️ {result.get('ten_may_pos') or ''}"
             )
             redis.mark_processed(invoice_key)
+        try:
+            percent = float(caption['phi'].strip('%')) / 100
+        except:
+            percent=0
+        cal_phi_dich_vu = int(sum * percent)
+        print("cal_phi_dich_vu: ",cal_phi_dich_vu)
+        print(cal_phi_dich_vu)
+        print(tien_phi_int)
+        if cal_phi_dich_vu != tien_phi_int:
+            message.reply_text(
+                f"❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
+                f"👉 Phí đúng theo hệ thống là: `{cal_phi_dich_vu}`"
+            )
+            return
         for item in list_data:
             item["KẾT TOÁN"] = sum
 
@@ -531,10 +551,10 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 sheet = spreadsheet.worksheet("MPOS")
         else:
                 sheet = spreadsheet.worksheet("Unknown")
+
+        insert_bill_rows(db,list_row_insert_db)
         append_multiple_by_headers(sheet, list_data)   
         
-
-
         db.close()
         if res_mess:
             reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
@@ -544,9 +564,9 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         message.reply_text(reply_msg)
     except Exception as e:
        
-        message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí" + str(e))
+        message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
-def insert_bill_row(db, row):
+def insert_bill_rows(db, list_rows):
     query = """
         INSERT INTO thong_tin_hoa_don (
             thoi_gian,
@@ -569,7 +589,7 @@ def insert_bill_row(db, row):
             caption_goc
         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s)
     """
-    db.execute(query, row)
+    db.executemany(query, list_rows)
 
 def parse_message_rut(text):
     data = {}
