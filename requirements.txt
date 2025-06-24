@@ -22,10 +22,10 @@ grpcio==1.73.0
 grpcio-status==1.71.0
 gspread==6.2.1
 gspread-formatting==1.1.2
-h11==0.14.0
-httpcore==0.17.3
+h11==0.16.0
+httpcore==1.0.9
 httplib2==0.22.0
-httpx==0.24.1
+httpx==0.28.1
 idna==3.10
 mysql-connector-python==9.3.0
 nest-asyncio==1.6.0
