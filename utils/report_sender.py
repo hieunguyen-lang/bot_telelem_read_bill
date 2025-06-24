@@ -36,7 +36,7 @@ def send_daily_report(bot: Bot, chat_id: int):
     for i, row in enumerate(results, 1):
         lines.append(
             f"*#{i} - {row['ten_khach']}*\n"
-            f"👤 Gửi bởi: {row['nguoi_gui']}\n"
+            f"👤 Gửi bởi: @{row['nguoi_gui']}\n"
             f"🗓 Ngày GD: {row['ngay_giao_dich']} | ☎ {row['so_dien_thoai']}\n"
             "-------------------"
         )
