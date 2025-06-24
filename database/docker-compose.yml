@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql_bill
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bill_data
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backup.sh:/backup.sh
+    ports:
+      - "3307:3306"
+    networks:
+      - bill_network
+
+  redis:
+    image: redis:alpine
+    container_name: redis_bill
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - bill_network
+
+volumes:
+  mysql_data:
+
+networks:
+  bill_network:
+    external: true

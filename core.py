@@ -218,16 +218,23 @@ def append_multiple_by_headers(sheet, data_dict_list):
     print(f"✅ Đã ghi {len(rows_to_append)} dòng vào Google Sheet.")
 
 def generate_invoice_key_simple(result: dict, caption: dict) -> str:
-    """
-    Tạo khóa duy nhất kiểm tra duplicate chỉ từ một số trường.
-    Ưu tiên các trường đặc trưng: số hóa đơn, số lô, tên khách.
-    """
-    so_hoa_don = result.get("so_hoa_don") or ''
-    so_lo = result.get("so_lo") or ''
-    ten_khach = caption.get("khach") or ''
-    
-    key = f"{so_hoa_don.strip().lower()}_{so_lo.strip().lower()}_{ten_khach.strip().lower()}"
-    return key
+        """
+        Tạo khóa duy nhất kiểm tra duplicate hóa đơn.
+        Ưu tiên các trường gần như không thể trùng nhau trong thực tế:
+        - Số hóa đơn
+        - Số lô
+        - Mã máy POS (TID)
+        - Giờ giao dịch
+        """
+        so_hoa_don = result.get("so_hoa_don", "").strip().lower()
+        so_lo = result.get("so_lo", "").strip().lower()
+        tid = result.get("tid", "").strip().lower()
+        mid = result.get("mid", "").strip().lower()
+        gio_giao_dich = result.get("gio_giao_dich", "").strip().lower()
+        ngay_giao_dich = result.get("ngay_giao_dich", "").strip().lower()
+        ngan_hang = result.get("ngay_giao_dich", "").strip().lower()
+        key = f"{so_hoa_don}_{so_lo}_{tid}_{mid}_{ngay_giao_dich}_{gio_giao_dich}_{ngan_hang}"
+        return key
 
 
 def format_currency_vn(value):
@@ -262,6 +269,23 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 continue
 
             ten_ngan_hang = result.get("ten_ngan_hang")
+            invoice_key = generate_invoice_key_simple(result, caption)
+            
+            if redis.is_duplicate(invoice_key):
+                message.reply_text(
+                    f"🚫 Hóa đơn đã được gửi trước đó:\n"
+                    f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
+                    f"• Ngân hàng: `{result.get('ngan_hang')}`\n"
+                    f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
+                    f"• Số lô: `{result.get('so_lo')}`\n"
+                    f"• TID: `{result.get('tid')}`\n"
+                    f"• MID: `{result.get('mid')}`\n"
+                    f"• Ngày giao dịch : `{result.get('ngay_giao_dich')}`\n"
+                    f"• Giờ giao dịch: `{result.get('gio_giao_dich')}`\n"
+                    f"• Khách: *{caption.get('khach', 'Không rõ')}*",
+                    parse_mode="Markdown"
+                )
+                return
             
             row = [
                 timestamp,
@@ -275,6 +299,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("tong_so_tien"),
                 result.get("so_the"),
                 result.get("tid"),
+                result.get("mid"),
                 result.get("so_lo"),
                 result.get("so_hoa_don"),    
                 result.get("ten_may_pos"),
@@ -297,19 +322,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "TÊN POS": result.get("ten_may_pos"),
                 "PHÍ DV": caption['tien_phi'],
             }
-            invoice_key = generate_invoice_key_simple(result, caption)
             
-            if redis.is_duplicate(invoice_key):
-                message.reply_text(
-                    f"🚫 Hóa đơn đã được gửi trước đó:\n"
-                    f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
-                    f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
-                    f"• Số lô: `{result.get('so_lo')}`\n"
-                    f"• Khách: *{caption.get('khach', 'Không rõ')}*",
-                    parse_mode="Markdown"
-                )
-                return
-            redis.mark_processed(invoice_key)
             if result.get("so_hoa_don") is not None:
                 list_data.append(data)
                 insert_bill_row(db, row)
@@ -324,6 +337,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                     f"🧾 {result.get('so_lo') or ''} - "
                     f"🖥️ {result.get('ten_may_pos') or ''}"
                 )
+            redis.mark_processed(invoice_key)
             
         for item in list_data:
             item["KẾT TOÁN"] = sum
@@ -376,6 +390,24 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 continue
             ten_ngan_hang = result.get("ten_ngan_hang")
 
+            invoice_key = generate_invoice_key_simple(result, caption)
+            
+            if redis.is_duplicate(invoice_key):
+                message.reply_text(
+                    f"🚫 Hóa đơn đã được gửi trước đó:\n"
+                    f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
+                    f"• Ngân hàng: `{result.get('ngan_hang')}`\n"
+                    f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
+                    f"• Số lô: `{result.get('so_lo')}`\n"
+                    f"• TID: `{result.get('tid')}`\n"
+                    f"• MID: `{result.get('mid')}`\n"
+                    f"• Ngày giao dịch : `{result.get('ngay_giao_dich')}`\n"
+                    f"• Giờ giao dịch: `{result.get('gio_giao_dich')}`\n"
+                    f"• Khách: *{caption.get('khach', 'Không rõ')}*",
+                    parse_mode="Markdown"
+                )
+                return
+            
 
             row = [
                 timestamp,
@@ -389,6 +421,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("tong_so_tien"),
                 result.get("so_the"),
                 result.get("tid"),
+                result.get("mid"),
                 result.get("so_lo"),
                 result.get("so_hoa_don"),    
                 result.get("ten_may_pos"),
@@ -411,19 +444,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "TÊN POS": result.get("ten_may_pos"),
                 "PHÍ DV": caption['tien_phi'],
             }
-            invoice_key = generate_invoice_key_simple(result, caption)
             
-            if redis.is_duplicate(invoice_key):
-                message.reply_text(
-                    f"🚫 Hóa đơn đã được gửi trước đó:\n"
-                    f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
-                    f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
-                    f"• Số lô: `{result.get('so_lo')}`\n"
-                    f"• Khách: *{caption.get('khach', 'Không rõ')}*",
-                    parse_mode="Markdown"
-                )
-                return
-            redis.mark_processed(invoice_key)
             if result.get("so_hoa_don") is not None:
                 list_data.append(data)
                 insert_bill_row(db, row)
@@ -439,6 +460,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                     f"🧾 {result.get('so_lo') or ''} - "
                     f"🖥️ {result.get('ten_may_pos') or ''}"
                 )
+            redis.mark_processed(invoice_key)
         for item in list_data:
             item["KẾT TOÁN"] = sum
             # Ghi dữ liệu

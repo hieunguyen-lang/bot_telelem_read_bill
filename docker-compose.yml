@@ -4,32 +4,14 @@ services:
   telegram-bot:
     build: .
     container_name: telegram_bill_bot
-    depends_on:
-      - mysql
-      - redis
+    restart: unless-stopped
     volumes:
       - .:/app
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/app/your-creds.json
-    restart: unless-stopped
-  mysql:
-    image: mysql:8
-    container_name: mysql_bill
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: bill_data
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./backup.sh:/backup.sh
-    ports:
-      - "3307:3306"
-  redis:
-    image: redis:alpine
-    container_name: redis_bill
-    restart: always
-    ports:
-      - "6379:6379"
-volumes:
-  mysql_data:
+    networks:
+      - bill_network  # hoặc bill_network nếu bạn dùng tên đó
+
+networks:
+  bill_network:
+    external: true

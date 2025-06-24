@@ -32,3 +32,5 @@ docker exec mysql_bill /usr/bin/mysqldump -u root --password=root bill_data > "C
 
 
 AIzaSyAStkF_-lQrzja-CTXVvA__9vqVrPwsmTQ
+
+docker network create bill_network

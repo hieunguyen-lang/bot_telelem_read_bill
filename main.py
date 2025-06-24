@@ -14,15 +14,16 @@ updater = Updater(
 )
 
 bot = updater.bot
-chat_id = int(os.getenv("GROUP_DAO_ID"))  # từ .env
+chat_id_dao = int(os.getenv("GROUP_THONG_BAO"))  # từ .env
+
 # Khởi tạo scheduler và job
 scheduler = BackgroundScheduler()
 scheduler.add_job(
     send_daily_report,
     'cron',
-    hour=9,
-    minute=0,
-    args=[bot, chat_id],
+    hour=0,
+    minute=5,
+    args=[bot, chat_id_dao],
     timezone=pytz.timezone("Asia/Ho_Chi_Minh")
 )
 scheduler.start()

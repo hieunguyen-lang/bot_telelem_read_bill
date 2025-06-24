@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS thong_tin_hoa_don (
     tong_so_tien VARCHAR(50),
     so_the VARCHAR(100),
     tid VARCHAR(50),
+    mid VARCHAR(50),
     so_lo VARCHAR(100),
     so_hoa_don VARCHAR(100),
     ten_may_pos VARCHAR(100),
