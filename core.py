@@ -439,7 +439,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 ten_ngan_hang="MPOS"
             else:
                 ten_ngan_hang = result.get("ten_ngan_hang")
-            invoice_key = generate_invoice_key_simple(result, caption)
+            invoice_key = generate_invoice_key_simple(result, ten_ngan_hang)
             duplicate = redis.is_duplicate(invoice_key)
             #duplicate = False
            
