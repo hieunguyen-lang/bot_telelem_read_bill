@@ -25,15 +25,54 @@ class GeminiBillAnalyzer:
             return None
         try:
             invoice_extraction_prompt = """
-                🧠 Prompt AI Toàn Diện Trích Xuất Dữ Liệu Giao Dịch POS & MPOS
+            🎯 Bối cảnh:
+            Bạn là một trợ lý AI thông minh, chuyên phân loại và trích xuất dữ liệu từ ảnh hóa đơn tài chính tại Việt Nam.
+            📌 Hãy trả lời tuần tự các câu hỏi sau để xác định loại ảnh:
+                ❓ Câu hỏi 1: Ảnh có phải là giao diện của một ứng dụng di động, không phải giấy in  không?
+                Nếu CÓ, kiểm tra kỹ:
+                    -Nếu ảnh có các yếu tố UI đặc trưng như: thanh tiêu đề (ví dụ: "Chi tiết giao dịch" trên nền màu đỏ), nút chức năng (ví dụ: "Gửi lại hóa đơn", "Chia sẻ"), biểu tượng (icon thẻ, dấu tick xanh...)
+                        Đặc biệt không chứa các từ khóa đặc trưng:
+                            -"Chuyển khoản thành công", "Biên lai giao dịch", "Chi tiết giao dịch", "Tài khoản thụ hưởng"
+                            -Thông tin bắt buộc phải có:
+                            -Người gửi: Tên hoặc số tài khoản
+                            -Người nhận: Tên và số tài khoản thụ hưởng
+                            -Nội dung chuyển khoản
+                            -Mã giao dịch ngân hàng
+                        → Đây là BILL THANH TOÁN  👉 Chuyển đến Bước C để trích xuất dữ liệu.
+                    
+                    -Nếu ảnh chứa các nút điều hướng như "Chuyển khoản mới", "Tạo mã QR", "Sao kê"
+                        → 👉 Chuyển đến Bước A  Nhận diện Bill Chuyển Khoản
 
-                🎯 Bối cảnh:
-                Bạn là một trợ lý AI thông minh, chuyên trích xuất dữ liệu từ:
+                Nếu KHÔNG, đây là bill giấy được in từ máy POS → 👉 Chuyển đến Bước B  Nhận diện Bill Giấy
+            🔹 Bước A: Nhận dạng Bill Chuyển Khoản (Từ App Banking)
+                    -Mục đích: Bằng chứng cho việc tiền đã được chuyển từ tài khoản A → tài khoản B.
+                    -Từ khóa đặc trưng:
+                    -"Chuyển khoản thành công", "Biên lai giao dịch", "Chi tiết giao dịch", "Tài khoản thụ hưởng"
+                    -Thông tin bắt buộc phải có:
+                    -Người gửi: Tên hoặc số tài khoản
+                    -Người nhận: Tên và số tài khoản thụ hưởng
+                    -Nội dung chuyển khoản
+                    -Mã giao dịch ngân hàng
+                    ✅ Nếu tất cả các yếu tố trên đều xuất hiện → Đây là BILL CHUYỂN KHOẢN
 
-                - Hóa đơn máy POS của ngân hàng HDBank, MB Bank, VPBank (in giấy).
-                - Ảnh màn hình "Chi tiết giao dịch" từ ứng dụng thanh toán MPOS tại Việt Nam.
+            🔹 Bước B: Nhận dạng Bill Giấy (Từ Máy POS)
+                    ❓ Câu hỏi 2: Tiêu đề chính giữa của bill là gì?
+                    ➤ Trường hợp 1: Tiêu đề có chứa "THANH TOÁN" hoặc "SALE"
+                        Mục đích: Giao dịch mua hàng bằng thẻ
+                        Đặc điểm:
+                            -Chỉ liên quan đến một giao dịch cụ thể
+                            -Có thông tin về: số thẻ (che), loại thẻ (VISA/Master), số tiền, TID/MID, mã chuẩn chi, số tham chiếu
+                            -Không có bảng tổng hợp
+                        → Đây là BILL THANH TOÁN 👉 Chuyển đến Bước C để trích xuất dữ liệu.
+                    ➤ Trường hợp 2: Tiêu đề chứa "KẾT TOÁN", "TỔNG KẾT", "SETTLEMENT", "BÁO CÁO"
+                        → Đây là BILL KẾT TOÁN 
+                            -Mục đích: Tổng hợp nhiều giao dịch POS trong ngày/lô
+                            -Đặc điểm:
+                            -Có bảng thống kê theo loại thẻ (VISA, MASTER,...)
+                            -Có số lượng, tổng tiền, batch (số lô)
+                            -KHÔNG có thông tin về khách hàng hay số thẻ cụ thể
 
-                🎯 Nhiệm vụ:
+            🔹 Bước C: Trích xuất nếu là BILL THANH TOÁN:  
                 Phân tích hình ảnh được cung cấp và trích xuất thông tin vào định dạng JSON duy nhất bên dưới.
 
                 ❗ Yêu cầu bắt buộc:
