@@ -345,6 +345,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("so_hoa_don"),    
                 result.get("ten_may_pos"),
                 caption['lich_canh_bao'],
+                convert_human_currency_to_number(caption['tien_phi']),
                 message.caption
             ]
         
