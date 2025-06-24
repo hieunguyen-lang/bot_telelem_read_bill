@@ -217,7 +217,7 @@ def append_multiple_by_headers(sheet, data_dict_list):
     sheet.append_rows(rows_to_append, value_input_option="USER_ENTERED")
     print(f"✅ Đã ghi {len(rows_to_append)} dòng vào Google Sheet.")
 
-def generate_invoice_key_simple(result: dict, caption: dict) -> str:
+def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
     """
     Tạo khóa duy nhất kiểm tra duplicate hóa đơn.
     Ưu tiên các trường gần như không thể trùng nhau trong thực tế:
@@ -239,7 +239,7 @@ def generate_invoice_key_simple(result: dict, caption: dict) -> str:
         safe_get(result, "mid"),
         safe_get(result, "ngay_giao_dich"),
         safe_get(result, "gio_giao_dich"),
-        safe_get(result, "ten_ngan_hang")
+        ten_ngan_hang
     ])
     return key
 
@@ -307,7 +307,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             else:
                 ten_ngan_hang = result.get("ten_ngan_hang")
             
-            invoice_key = generate_invoice_key_simple(result, caption)
+            invoice_key = generate_invoice_key_simple(result, ten_ngan_hang)
             duplicate = redis.is_duplicate(invoice_key)
             #duplicate = False
             if duplicate:
