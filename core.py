@@ -218,30 +218,37 @@ def append_multiple_by_headers(sheet, data_dict_list):
     print(f"✅ Đã ghi {len(rows_to_append)} dòng vào Google Sheet.")
 
 def generate_invoice_key_simple(result: dict, caption: dict) -> str:
-        """
-        Tạo khóa duy nhất kiểm tra duplicate hóa đơn.
-        Ưu tiên các trường gần như không thể trùng nhau trong thực tế:
-        - Số hóa đơn
-        - Số lô
-        - Mã máy POS (TID)
-        - Giờ giao dịch
-        """
-        so_hoa_don = result.get("so_hoa_don", "").strip().lower()
-        so_lo = result.get("so_lo", "").strip().lower()
-        tid = result.get("tid", "").strip().lower()
-        mid = result.get("mid", "").strip().lower()
-        gio_giao_dich = result.get("gio_giao_dich", "").strip().lower()
-        ngay_giao_dich = result.get("ngay_giao_dich", "").strip().lower()
-        ngan_hang = result.get("ten_ngan_hang", "").strip().lower()
-        key = f"{so_hoa_don}_{so_lo}_{tid}_{mid}_{ngay_giao_dich}_{gio_giao_dich}_{ngan_hang}"
-        return key
+    """
+    Tạo khóa duy nhất kiểm tra duplicate hóa đơn.
+    Ưu tiên các trường gần như không thể trùng nhau trong thực tế:
+    - Số hóa đơn
+    - Số lô
+    - Mã máy POS (TID)
+    - MID
+    - Ngày + Giờ giao dịch
+    - Tên ngân hàng
+    """
+    print("[Tạo key redis]")
+    def safe_get(d, key):
+        return (d.get(key) or '').strip().lower()
+
+    key = "_".join([
+        safe_get(result, "so_hoa_don"),
+        safe_get(result, "so_lo"),
+        safe_get(result, "tid"),
+        safe_get(result, "mid"),
+        safe_get(result, "ngay_giao_dich"),
+        safe_get(result, "gio_giao_dich"),
+        safe_get(result, "ten_ngan_hang")
+    ])
+    return key
 
 
 def format_currency_vn(value):
     try:
         return f"{int(value):,}".replace(",", ".")
     except:
-        return value  # fallback nếu lỗi
+        return str(0)  # fallback nếu lỗi
 
 def convert_human_currency_to_number(value) -> str:
     """
@@ -354,7 +361,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "SỐ HÓA ĐƠN": result.get("so_hoa_don"),
                 "GIỜ GIAO DỊCH": result.get("gio_giao_dich"),
                 "TÊN POS": result.get("ten_may_pos"),
-                "PHÍ DV": caption['tien_phi'],
+                "PHÍ DV": convert_human_currency_to_number(caption['tien_phi']),
             }
             
             if result.get("so_hoa_don") is not None:
