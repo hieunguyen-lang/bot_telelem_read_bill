@@ -289,12 +289,14 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         list_data=[]
         list_row = []
         sum=0
+        ten_ngan_hang=None
         for img_b64 in image_b64_list:
             result = analyzer.analyze_bill(img_b64)
-            if result is None:
-                continue
+            if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None:
+                    print(str(result.get("ten_ngan_hang")) + '-'+ str(result.get("so_hoa_don")))
+                    continue
 
-            ten_ngan_hang = result.get("ten_ngan_hang")
+            
             invoice_key = generate_invoice_key_simple(result, caption)
             duplicate = redis.is_duplicate(invoice_key)
             #duplicate = False
@@ -418,7 +420,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             result = analyzer.analyze_bill(img_b64)
             print(result)
            
-            if result.get("ten_ngan_hang") is None or result.get("so_hoa_don") is None:
+            if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None:
                     print(str(result.get("ten_ngan_hang")) + '-'+ str(result.get("so_hoa_don")))
                     continue
                 
