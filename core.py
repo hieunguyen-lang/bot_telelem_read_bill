@@ -270,8 +270,9 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
 
             ten_ngan_hang = result.get("ten_ngan_hang")
             invoice_key = generate_invoice_key_simple(result, caption)
-            
-            if redis.is_duplicate(invoice_key):
+            duplicate = redis.is_duplicate(invoice_key)
+            duplicate = False
+            if duplicate:
                 message.reply_text(
                     f"🚫 Hóa đơn đã được gửi trước đó:\n"
                     f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
@@ -303,6 +304,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("so_lo"),
                 result.get("so_hoa_don"),    
                 result.get("ten_may_pos"),
+                caption['lich_canh_bao'],
                 message.caption
             ]
         
@@ -385,14 +387,16 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         sum= 0
         
         for img_b64 in image_b64_list:
+            
             result = analyzer.analyze_bill(img_b64)
             if result is None:
                 continue
             ten_ngan_hang = result.get("ten_ngan_hang")
 
             invoice_key = generate_invoice_key_simple(result, caption)
-            
-            if redis.is_duplicate(invoice_key):
+            duplicate = redis.is_duplicate(invoice_key)
+            duplicate = False
+            if duplicate ==True:
                 message.reply_text(
                     f"🚫 Hóa đơn đã được gửi trước đó:\n"
                     f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
@@ -425,6 +429,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("so_lo"),
                 result.get("so_hoa_don"),    
                 result.get("ten_may_pos"),
+                caption['lich_canh_bao'],
                 message.caption
             ]
               # Ghi vào MySQL
@@ -504,11 +509,13 @@ def insert_bill_row(db, row):
             tong_so_tien,
             so_the,
             tid,
+            mid,
             so_lo,
             so_hoa_don,
             ten_may_pos,
+            lich_canh_bao,
             caption_goc
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s)
     """
     db.execute(query, row)
 

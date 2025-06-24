@@ -20,11 +20,10 @@ chat_id_dao = int(os.getenv("GROUP_THONG_BAO"))  # từ .env
 scheduler = BackgroundScheduler()
 scheduler.add_job(
     send_daily_report,
-    'cron',
-    hour=0,
-    minute=5,
+    'interval',
+    minutes=360,
     args=[bot, chat_id_dao],
-    timezone=pytz.timezone("Asia/Ho_Chi_Minh")
+    timezone=pytz.timezone("Asia/Ho_Chi_Minh")  # vẫn cần pytz
 )
 scheduler.start()
 

@@ -2,6 +2,7 @@ from telegram import Bot
 from datetime import datetime,timedelta
 import os
 from mysql_db_connector import MySQLConnector
+import pytz
 db = MySQLConnector(
     host=os.getenv("MYSQL_HOST"),
     user=os.getenv("MYSQL_USER"),
@@ -11,15 +12,17 @@ db = MySQLConnector(
 )
 
 def send_daily_report(bot: Bot, chat_id: int):
-    tomorrow_str = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
-
+    tz = pytz.timezone("Asia/Ho_Chi_Minh")
+    now = datetime.now(tz)
+    tomorrow = now + timedelta(days=1)
+    tomorrow_day = str(tomorrow.day)
+    print(f"Đang gửi báo cáo hàng ngày cho ngày {tomorrow_day}...")
     query = """
         SELECT nguoi_gui, ten_khach, ngay_giao_dich, so_dien_thoai
         FROM thong_tin_hoa_don
-        WHERE STR_TO_DATE(ngay_giao_dich, '%%Y-%%m-%%d') = %s
+        WHERE lich_canh_bao = %s
     """
-
-    results = db.fetchall(query, (tomorrow_str,))
+    results = db.fetchall(query, (tomorrow_day,))
 
     if not results:
         bot.send_message(
@@ -37,9 +40,10 @@ def send_daily_report(bot: Bot, chat_id: int):
             f"🗓 Ngày GD: {row['ngay_giao_dich']} | ☎ {row['so_dien_thoai']}\n"
             "-------------------"
         )
-    tomorrow = datetime.now() + timedelta(days=1)
+
     tomorrow_str = tomorrow.strftime('%d/%m/%Y')
     report = "\n".join(lines)
+
     bot.send_message(
         chat_id=chat_id,
         text=f"📆 *Lịch hẹn ngày mai ({tomorrow_str})*: Dưới đây là danh sách khách có giao dịch đáo/rút bạn cần lưu ý:\n\n" + report,
