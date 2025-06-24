@@ -42,7 +42,7 @@ class GeminiBillAnalyzer:
             Bạn là một chuyên gia phân tích hóa đơn tài chính. Hãy phân tích hình ảnh hóa đơn được cung cấp và trích xuất các thông tin sau vào định dạng JSON. Nếu một trường không xuất hiện hoặc không thể xác định rõ ràng từ hóa đơn, hãy gán giá trị null cho trường đó
             ❗ **Lưu ý quan trọng:**
                 - Nếu đây là hóa đơn chuyển tiền ngân hàng cá nhân (ví dụ như từ app ngân hàng Sacombank, Techcombank, VPBank,... mà chỉ chứa nội dung như “Giao dịch thành công”, “Chuyển khoản thành công”, “Người nhận”, “Mã giao dịch”, “Số tiền”, mà không có thông tin máy POS, MID/TID, mã số hóa đơn, số lô,…), thì đây **không phải là hóa đơn thanh toán POS**, hãy **trả về: `null`.
-                - Chỉ xử lý và trích xuất nếu hóa đơn là loại **"THANH TOÁN"**,**"'SALE-THANH TOÁN"** POS thực sự.
+                - Chỉ xử lý và trích xuất nếu hóa đơn là loại **"THANH TOÁN"**,**"SALE-THANH TOÁN"** POS thực sự.
                 - Nếu hóa đơn là loại: **"BÁO CÁO CHI TIẾT"**, **"BÁO CÁO KẾT TOÁN"**, **"KẾT TOÁN THÀNH CÔNG"**, **"TỔNG KẾT"**, **"KẾT TOÁN"** v.v... thì **không trích xuất gì cả, hãy trả về: `null`**.
 
             Nếu hóa đơn là loại "THANH TOÁN" POS hợp lệ, hãy trích xuất các trường sau vào 1 đối tượng JSON:
