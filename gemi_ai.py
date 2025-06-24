@@ -5,12 +5,16 @@ from google import genai
 from google.genai import types
 from google.auth import default
 from google.auth.credentials import Credentials
+from google.auth import load_credentials_from_file
 
 
 class GeminiBillAnalyzer:
     def __init__(self):
         # Lấy thông tin xác thực mặc định từ môi trường (ADC - Application Default Credentials)
-        credentials, _ = default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        credentials, _ = load_credentials_from_file(
+            "gemini-creds.json",
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
         self.client = genai.Client(
             vertexai=True,
             project="e-caldron-463814-p7",

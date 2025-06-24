@@ -9,6 +9,7 @@ services:
       - .:/app
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/app/your-creds.json
+      
     networks:
       - bill_network  # hoặc bill_network nếu bạn dùng tên đó
 
