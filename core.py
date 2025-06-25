@@ -305,6 +305,9 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         ten_ngan_hang=None
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
         for img_b64 in image_b64_list:
+            
+            
+            result = analyzer.analyze_bill(img_b64)
             invoice_key = generate_invoice_key_simple(result, ten_ngan_hang)
             duplicate = redis.is_duplicate(invoice_key)
             #duplicate = False
@@ -325,8 +328,6 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                     parse_mode="Markdown"
                 )
                 return
-            
-            result = analyzer.analyze_bill(img_b64)
             if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
                 print("Cả ten_ngan_hang và so_hoa_don so_lo so_the None")
                 continue
@@ -479,6 +480,8 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         ten_ngan_hang=None
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
         for img_b64 in image_b64_list:
+            
+            result = analyzer.analyze_bill(img_b64)
             invoice_key = generate_invoice_key_simple(result, ten_ngan_hang)
             duplicate = redis.is_duplicate(invoice_key)
             #duplicate = False
@@ -500,8 +503,6 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                     parse_mode="Markdown"
                 )
                 return
-            result = analyzer.analyze_bill(img_b64)
-            print(result)
            
             if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
                 print("Cả ten_ngan_hang và so_hoa_don None")
