@@ -305,7 +305,16 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         for img_b64 in image_b64_list:
             result = analyzer.analyze_bill(img_b64)
             if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
-                print("Cả ten_ngan_hang và so_hoa_don None")
+                print("Cả ten_ngan_hang và so_hoa_don so_lo so_the None")
+                continue
+            if result.get("so_lo") is None and result.get("mid") is None and result.get("tid") is None and result.get("so_the") is None:
+                print("Cả so_lo và mid so_the tid ")
+                continue
+            if result.get("so_lo") is None and result.get("mid") is None:
+                print("Cả so_lo và mid ")
+                continue
+            if result.get("so_lo") is None and result.get("tid") is None:
+                print("Cả so_lo và tid ")
                 continue
             if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
                 print("Đây là hóa đơn kết toán")
@@ -474,6 +483,15 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
            
             if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
                 print("Cả ten_ngan_hang và so_hoa_don None")
+                continue
+            if result.get("so_lo") is None and result.get("mid") is None and result.get("tid") is None and result.get("so_the") is None:
+                print("Cả so_lo và mid so_the tid ")
+                continue
+            if result.get("so_lo") is None and result.get("mid") is None:
+                print("Cả so_lo và mid ")
+                continue
+            if result.get("so_lo") is None and result.get("tid") is None:
+                print("Cả so_lo và tid ")
                 continue
             if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
                 print("Đây là hóa đơn kết toán")
