@@ -243,41 +243,43 @@ def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
     ])
     return key
 
-
 def format_currency_vn(value):
     try:
-        if isinstance(value, str):
-            # Xử lý dấu phẩy thành chấm (nếu có)
-            value = value.strip().lower().replace(",", ".")
-
-            # Khớp với số có hậu tố k hoặc m
-            match = re.match(r"([\d\.]+)([km]?)", value)
-            if not match:
-                return "0"
-
-            number, suffix = match.groups()
-            number = float(number)
-
-            if suffix == "k":
-                number *= 1_000
-            elif suffix == "m":
-                number *= 1_000_000
-        else:
-            number = float(value)
-
-        return f"{int(number):,}".replace(",", ".")
+        return f"{int(value):,}".replace(",", ".")
     except:
-        return "0"
+        return str(0)  # fallback nếu lỗi
 
-def convert_human_currency_to_number(s):
+
+def parse_currency_input_int(value):
     """
-    Chuyển đổi chuỗi tiền tệ như '1,776,510', '1.776.510 ₫', '1 776 510đ' thành số nguyên 1776510
+    Chuyển chuỗi tiền tệ (kể cả có hậu tố k/m, dấu chấm, đ, ₫...) thành số nguyên.
     """
-    if not s:
+    if not value:
         return 0
-    # Xóa tất cả ký tự không phải số
-    cleaned = re.sub(r"[^\d]", "", s)
-    return int(cleaned) if cleaned else 0
+
+    try:
+        if isinstance(value, (int, float)):
+            return int(value)
+
+        s = str(value).strip().lower().replace(",", ".").replace(" ", "")
+        
+        # Nếu có hậu tố k/m
+        km_match = re.match(r"([\d\.]+)([km])", s)
+        if km_match:
+            num, suffix = km_match.groups()
+            num = float(num)
+            if suffix == "k":
+                num *= 1_000
+            elif suffix == "m":
+                num *= 1_000_000
+            return int(num)
+
+        # Không có hậu tố → giữ lại toàn bộ số
+        digits_only = re.sub(r"[^\d]", "", s)
+        return int(digits_only) if digits_only else 0
+
+    except:
+        return 0
       
 def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
@@ -301,7 +303,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         list_row_insert_db = []
         sum=0
         ten_ngan_hang=None
-        tien_phi_int =convert_human_currency_to_number(caption['tien_phi'])
+        tien_phi_int =parse_currency_input_int(caption['tien_phi'])
         for img_b64 in image_b64_list:
             result = analyzer.analyze_bill(img_b64)
             if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
@@ -475,7 +477,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         list_row_insert_db = []
         sum= 0
         ten_ngan_hang=None
-        tien_phi_int =convert_human_currency_to_number(caption['tien_phi'])
+        tien_phi_int =parse_currency_input_int(caption['tien_phi'])
         for img_b64 in image_b64_list:
             
             result = analyzer.analyze_bill(img_b64)
