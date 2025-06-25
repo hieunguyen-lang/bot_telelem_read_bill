@@ -301,6 +301,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         list_data=[]
         print(len(image_b64_list), "ảnh cần xử lý")
         list_row_insert_db = []
+        list_invoice_key = []
         sum=0
         ten_ngan_hang=None
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
@@ -388,6 +389,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 )
                 return
             list_data.append(data)
+            list_invoice_key.append(invoice_key)
             list_row_insert_db.append(row)
             sum += int(result.get("tong_so_tien") or 0)
             # Lưu lại kết quả để in ra cuối
@@ -400,7 +402,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 f"🧾 {result.get('so_lo') or ''} - "
                 f"🖥️ {result.get('ten_may_pos') or ''}"
             )
-            redis.mark_processed(invoice_key)
+            
         if sum >10000000:
             
 
@@ -426,7 +428,8 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 # Giả sử cột 'tien_phi' nằm ở index 16
                 row[16] = tien_phi_int      
                 
-        
+        for item in list_invoice_key:
+            redis.mark_processed(item)
         for item in list_data:
             item["KẾT TOÁN"] = sum
             
@@ -474,6 +477,8 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         list_data=[]
         print(len(image_b64_list), "ảnh cần xử lý")
         list_row_insert_db = []
+        list_invoice_key = []
+
         sum= 0
         ten_ngan_hang=None
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
@@ -563,6 +568,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                     parse_mode="Markdown"
                 )
                 return
+            list_invoice_key.append(invoice_key)
             list_data.append(data)
             list_row_insert_db.append(row)
             sum += int(result.get("tong_so_tien") or 0)
@@ -577,7 +583,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                     f"🧾 {result.get('so_lo') or ''} - "
                     f"🖥️ {result.get('ten_may_pos') or ''}"
             )
-            redis.mark_processed(invoice_key)
+            
         if sum >10000000:
            
             try:
@@ -603,7 +609,8 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 # Giả sử cột 'tien_phi' nằm ở index 16
                 row[16] = tien_phi_int   
         
-        
+        for item in list_invoice_key:
+            redis.mark_processed(item)
         for item in list_data:
             item["KẾT TOÁN"] = sum
 
