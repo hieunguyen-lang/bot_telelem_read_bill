@@ -307,7 +307,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
         for img_b64 in image_b64_list:
             filter_ai =analyzer.filter_ai(img_b64)
-            if filter_ai.strip() =='TRUE':
+            if filter_ai.get("is_payment_bill") == False:
                 continue
             result = analyzer.analyze_bill(img_b64)
             
@@ -485,7 +485,8 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
         for img_b64 in image_b64_list:
             filter_ai =analyzer.filter_ai(img_b64)
-            if filter_ai.strip() =='TRUE':
+            if filter_ai.get("is_payment_bill") == False:
+                print(filter_ai.get("is_payment_bill"))
                 continue
             result = analyzer.analyze_bill(img_b64)
             
