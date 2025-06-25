@@ -246,9 +246,28 @@ def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
 
 def format_currency_vn(value):
     try:
-        return f"{int(value):,}".replace(",", ".")
+        if isinstance(value, str):
+            # Xử lý dấu phẩy thành chấm (nếu có)
+            value = value.strip().lower().replace(",", ".")
+
+            # Khớp với số có hậu tố k hoặc m
+            match = re.match(r"([\d\.]+)([km]?)", value)
+            if not match:
+                return "0"
+
+            number, suffix = match.groups()
+            number = float(number)
+
+            if suffix == "k":
+                number *= 1_000
+            elif suffix == "m":
+                number *= 1_000_000
+        else:
+            number = float(value)
+
+        return f"{int(number):,}".replace(",", ".")
     except:
-        return str(0)  # fallback nếu lỗi
+        return "0"
 
 def convert_human_currency_to_number(s):
     """
