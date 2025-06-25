@@ -422,12 +422,10 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 )
                 return   
         else:
-           
             for row in list_row_insert_db:
                 # Giả sử cột 'tien_phi' nằm ở index 16
                 row[16] = tien_phi_int      
-        print(sum)
-        print("cal_phi_dich_vu: ",cal_phi_dich_vu)
+                
         
         for item in list_data:
             item["KẾT TOÁN"] = sum
@@ -604,8 +602,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             for row in list_row_insert_db:
                 # Giả sử cột 'tien_phi' nằm ở index 16
                 row[16] = tien_phi_int   
-        print(sum)     
-        print("cal_phi_dich_vu: ",cal_phi_dich_vu)
+        
         
         for item in list_data:
             item["KẾT TOÁN"] = sum

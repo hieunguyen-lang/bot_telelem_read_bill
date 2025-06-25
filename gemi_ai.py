@@ -21,7 +21,8 @@ class GeminiBillAnalyzer:
             location="global",
             credentials=credentials  
         )
-        self.model = "gemini-2.5-pro"
+        #gemini-2.5-pro
+        self.model = "gemini-2.5-flash"
 
     def analyze_bill(self, base64_str):
         if not base64_str:
