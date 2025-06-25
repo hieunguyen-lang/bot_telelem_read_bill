@@ -384,9 +384,11 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         print("cal_phi_dich_vu: ",cal_phi_dich_vu)
         if cal_phi_dich_vu != tien_phi_int:
             message.reply_text(
-                f"❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
-                f"👉 Phí đúng theo hệ thống là: `{str(int(cal_phi_dich_vu))}`"
+                "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
+                "👉 Phí đúng theo hệ thống là:\n\n"
+                f"💰 `{int(cal_phi_dich_vu)}`"
             )
+
             return
         for item in list_data:
             item["KẾT TOÁN"] = sum
@@ -546,9 +548,11 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         print("cal_phi_dich_vu: ",cal_phi_dich_vu)
         if cal_phi_dich_vu != tien_phi_int:
             message.reply_text(
-                f"❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
-                f"👉 Phí đúng theo hệ thống là: `{str(int(cal_phi_dich_vu))}`"
+                "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
+                "👉 Phí đúng theo hệ thống là:\n\n"
+                f"💰 `{int(cal_phi_dich_vu)}`"
             )
+
             return
         for item in list_data:
             item["KẾT TOÁN"] = sum
