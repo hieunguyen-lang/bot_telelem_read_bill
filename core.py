@@ -415,10 +415,9 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             if cal_phi_dich_vu != tien_phi_int:
                 message.reply_text(
                     "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
-                    "👉 Phí đúng theo hệ thống là:\n\n"
-                    f"💰 `{int(cal_phi_dich_vu)}`"
+                    "👉 Sao chép phí đúng từ dòng bên dưới:\n\n"
+                    f"`{int(cal_phi_dich_vu)}`"
                 )
-
                 return   
         else:
            
@@ -594,10 +593,9 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             if cal_phi_dich_vu != tien_phi_int:
                 message.reply_text(
                     "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
-                    "👉 Phí đúng theo hệ thống là:\n\n"
-                    f"💰 `{int(cal_phi_dich_vu)}`"
+                    "👉 Sao chép phí đúng từ dòng bên dưới:\n\n"
+                    f"`{int(cal_phi_dich_vu)}`"
                 )
-
                 return
         else:
 
