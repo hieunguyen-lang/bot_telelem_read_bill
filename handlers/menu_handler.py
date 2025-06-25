@@ -136,7 +136,7 @@ def search_hoa_hong_theo_thoi_gian(db, nguoi_gui, from_date, to_date):
             SELECT MAX(tong_so_tien) AS tong_tien_theo_lo
             FROM thong_tin_hoa_don
             WHERE nguoi_gui = %s AND thoi_gian BETWEEN %s AND %s
-            GROUP BY so_lo
+            GROUP BY so_hoa_don
         ) AS tong_theo_lo
     """
     result = db.fetchone(query, [nguoi_gui, from_date, to_date])
