@@ -369,12 +369,16 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 f"🖥️ {result.get('ten_may_pos') or ''}"
             )
             redis.mark_processed(invoice_key)
-        try:
-            percent = float(caption['phi'].strip('%')) / 100
-        except:
-            percent=0
+        if sum >10000000:
+            print("sum >10Tr")
+            try:
+                percent = float(caption['phi'].strip('%')) / 100
+            except:
+                percent=0
 
-        cal_phi_dich_vu = sum * percent   
+            cal_phi_dich_vu = sum * percent   
+        else:
+            cal_phi_dich_vu = sum * percent
         print(sum)
         print(percent)
         print("cal_phi_dich_vu: ",cal_phi_dich_vu)
@@ -526,11 +530,16 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                     f"🖥️ {result.get('ten_may_pos') or ''}"
             )
             redis.mark_processed(invoice_key)
-        try:
-            percent = float(caption['phi'].strip('%')) / 100
-        except:
-            percent=0
-        cal_phi_dich_vu = int(sum * percent)
+        if sum >10000000:
+            print("sum >10Tr")
+            try:
+                percent = float(caption['phi'].strip('%')) / 100
+            except:
+                percent=0
+
+            cal_phi_dich_vu = sum * percent   
+        else:
+            cal_phi_dich_vu = sum * percent
         print("cal_phi_dich_vu: ",cal_phi_dich_vu)
         print(sum)
         print(percent)
