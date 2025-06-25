@@ -370,12 +370,14 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             )
             redis.mark_processed(invoice_key)
         if sum >10000000:
-            print("sum >10Tr")
+            
+
             try:
                 percent = float(caption['phi'].strip('%')) / 100
             except:
                 percent=0
-
+            print("sum >10Tr")
+            print(percent)    
             cal_phi_dich_vu = sum * percent   
         else:
             cal_phi_dich_vu = 200000
@@ -383,7 +385,6 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 # Giả sử cột 'tien_phi' nằm ở index 16
                 row[16] = cal_phi_dich_vu      
         print(sum)
-        print(percent)
         print("cal_phi_dich_vu: ",cal_phi_dich_vu)
         if cal_phi_dich_vu != tien_phi_int:
             message.reply_text(
@@ -536,21 +537,20 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             )
             redis.mark_processed(invoice_key)
         if sum >10000000:
-            print("sum >10Tr")
+           
             try:
                 percent = float(caption['phi'].strip('%')) / 100
             except:
                 percent=0
-
+            print("sum >10Tr")
+            print(percent) 
             cal_phi_dich_vu = sum * percent   
         else:
             cal_phi_dich_vu = 200000
             for row in list_row_insert_db:
                 # Giả sử cột 'tien_phi' nằm ở index 16
                 row[16] = cal_phi_dich_vu   
-        print("cal_phi_dich_vu: ",cal_phi_dich_vu)
-        print(sum)
-        print(percent)
+        print(sum)     
         print("cal_phi_dich_vu: ",cal_phi_dich_vu)
         if cal_phi_dich_vu != tien_phi_int:
             message.reply_text(
