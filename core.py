@@ -378,22 +378,23 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 percent=0
             print("sum >10Tr")
             print(percent)    
-            cal_phi_dich_vu = sum * percent   
+            cal_phi_dich_vu = sum * percent
+            if cal_phi_dich_vu != tien_phi_int:
+                message.reply_text(
+                    "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
+                    "👉 Phí đúng theo hệ thống là:\n\n"
+                    f"💰 `{int(cal_phi_dich_vu)}`"
+                )
+
+                return   
         else:
-            cal_phi_dich_vu = 200000
+           
             for row in list_row_insert_db:
                 # Giả sử cột 'tien_phi' nằm ở index 16
-                row[16] = cal_phi_dich_vu      
+                row[16] = tien_phi_int      
         print(sum)
         print("cal_phi_dich_vu: ",cal_phi_dich_vu)
-        if cal_phi_dich_vu != tien_phi_int:
-            message.reply_text(
-                "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
-                "👉 Phí đúng theo hệ thống là:\n\n"
-                f"💰 `{int(cal_phi_dich_vu)}`"
-            )
-
-            return
+        
         for item in list_data:
             item["KẾT TOÁN"] = sum
             
@@ -545,21 +546,22 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             print("sum >10Tr")
             print(percent) 
             cal_phi_dich_vu = sum * percent   
+            if cal_phi_dich_vu != tien_phi_int:
+                message.reply_text(
+                    "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
+                    "👉 Phí đúng theo hệ thống là:\n\n"
+                    f"💰 `{int(cal_phi_dich_vu)}`"
+                )
+
+                return
         else:
-            cal_phi_dich_vu = 200000
+
             for row in list_row_insert_db:
                 # Giả sử cột 'tien_phi' nằm ở index 16
-                row[16] = cal_phi_dich_vu   
+                row[16] = tien_phi_int   
         print(sum)     
         print("cal_phi_dich_vu: ",cal_phi_dich_vu)
-        if cal_phi_dich_vu != tien_phi_int:
-            message.reply_text(
-                "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
-                "👉 Phí đúng theo hệ thống là:\n\n"
-                f"💰 `{int(cal_phi_dich_vu)}`"
-            )
-
-            return
+        
         for item in list_data:
             item["KẾT TOÁN"] = sum
 
