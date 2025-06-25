@@ -378,7 +378,10 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
 
             cal_phi_dich_vu = sum * percent   
         else:
-            cal_phi_dich_vu = sum * percent
+            cal_phi_dich_vu = 200000
+            for row in list_row_insert_db:
+                # Giả sử cột 'tien_phi' nằm ở index 16
+                row[16] = cal_phi_dich_vu      
         print(sum)
         print(percent)
         print("cal_phi_dich_vu: ",cal_phi_dich_vu)
@@ -541,7 +544,10 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
 
             cal_phi_dich_vu = sum * percent   
         else:
-            cal_phi_dich_vu = sum * percent
+            cal_phi_dich_vu = 200000
+            for row in list_row_insert_db:
+                # Giả sử cột 'tien_phi' nằm ở index 16
+                row[16] = cal_phi_dich_vu   
         print("cal_phi_dich_vu: ",cal_phi_dich_vu)
         print(sum)
         print(percent)
