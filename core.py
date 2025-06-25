@@ -306,8 +306,9 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         ten_ngan_hang=None
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
         for img_b64 in image_b64_list:
-            
-            
+            filter_ai =analyzer.filter_ai(img_b64)
+            if filter_ai.strip() =='TRUE':
+                continue
             result = analyzer.analyze_bill(img_b64)
             
             if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
@@ -483,7 +484,9 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         ten_ngan_hang=None
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
         for img_b64 in image_b64_list:
-            
+            filter_ai =analyzer.filter_ai(img_b64)
+            if filter_ai.strip() =='TRUE':
+                continue
             result = analyzer.analyze_bill(img_b64)
             
            

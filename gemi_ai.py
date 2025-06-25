@@ -225,3 +225,74 @@ class GeminiBillAnalyzer:
             "ten_may_pos": None,
             "so_the": None
         }
+    
+    def filter_ai(self, base64_str):
+        if not base64_str:
+            print("Không thể chuyển đổi hình ảnh.")
+            return None
+        try:
+            invoice_extraction_prompt = """
+            🎯 Bối cảnh:
+            Bạn là một trợ lý AI thông minh, chuyên xử lý ảnh và văn bản từ hóa đơn thanh toán tại Việt Nam.
+
+            📌 Nhiệm vụ:
+            Phân loại xem ảnh hóa đơn có hợp lệ để trích xuất thanh toán hay không. Trả về `TRUE` nếu hợp lệ, `FALSE` nếu không.
+
+            📎 Quy tắc:
+            1. Nếu ảnh là **ảnh chụp màn hình (screenshot)**, thì mặc định là **không hợp lệ (FALSE)**.
+            2. ❗ Tuy nhiên, nếu **ảnh chụp màn hình đến từ ứng dụng MPOS** (ví dụ có tiêu đề: "Chi tiết giao dịch", nút "Gửi hoá đơn", số thẻ, mã chuẩn chi...), thì **chấp nhận** → `TRUE`
+            3. Nếu văn bản trong ảnh chứa:
+            - `"Kết Toán"`, `"Tổng kết"`, `"SETTLEMENT - KẾT TOÁN"` → Trả về `FALSE`
+            - `"THANH TOÁN"` → Trả về `TRUE` (nếu không vi phạm 1 hoặc 3)
+
+            📤 Đầu ra:
+            Chỉ trả về `TRUE` hoặc `FALSE`.
+            """
+
+
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part(
+                            inline_data=types.Blob(
+                                mime_type="image/jpeg",
+                                data=base64_str
+                            )
+                        ),
+                        types.Part(text=invoice_extraction_prompt)
+                    ]
+                )
+            ]
+
+            config = types.GenerateContentConfig(
+                temperature=1,
+                top_p=1,
+                seed=0,
+                max_output_tokens=4096,
+                safety_settings=[
+                    types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
+                    types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"),
+                    types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"),
+                    types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF")
+                ],
+                thinking_config=types.ThinkingConfig(thinking_budget=-1),
+            )
+
+            print("Đang gửi yêu cầu đến Gemini API...")
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=contents,
+                config=config
+            )
+
+            response_text = response.text if hasattr(response, 'text') else str(response)
+            print(response_text)
+            return response_text
+           
+
+        except Exception as e:
+            print(f"Lỗi khi gọi Gemini API: {e}")
+            return 'FALSE'
+
+        
