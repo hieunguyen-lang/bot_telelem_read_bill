@@ -14,7 +14,7 @@ from io import BytesIO
 from gemi_ai import GeminiBillAnalyzer
 from mysql_db_connector import MySQLConnector
 from redis_connect import RedisDuplicateChecker
-
+from gemi_ai_filter import GPTBill_Analyzer
 
 from dotenv import load_dotenv
 load_dotenv()  # Tự động tìm và load từ .env
@@ -35,7 +35,8 @@ scope = [
 creds = ServiceAccountCredentials.from_json_keyfile_name("your-creds.json", scope)
 client = gspread.authorize(creds)
 print("🔑 GEMINI_API_KEY:", repr(GEMINI_API_KEY))
-analyzer = GeminiBillAnalyzer()
+#analyzer = GeminiBillAnalyzer()
+analyzer = GPTBill_Analyzer()
 db = MySQLConnector(
     host=os.getenv("MYSQL_HOST"),
     user=os.getenv("MYSQL_USER"),
@@ -306,10 +307,8 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         ten_ngan_hang=None
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
         for img_b64 in image_b64_list:
-            filter_ai =analyzer.filter_ai(img_b64)
-            if filter_ai.get("is_payment_bill") == False:
-                continue
-            result = analyzer.analyze_bill(img_b64)
+            
+            result = analyzer.analyze_bill_gpt(img_b64)
             
             if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
                 print("Cả ten_ngan_hang và so_hoa_don so_lo so_the None")
@@ -484,11 +483,8 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         ten_ngan_hang=None
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
         for img_b64 in image_b64_list:
-            filter_ai =analyzer.filter_ai(img_b64)
-            if filter_ai.get("is_payment_bill") == False:
-                print(filter_ai.get("is_payment_bill"))
-                continue
-            result = analyzer.analyze_bill(img_b64)
+            
+            result = analyzer.analyze_bill_gpt(img_b64)
             
            
             if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
