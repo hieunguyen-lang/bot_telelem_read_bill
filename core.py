@@ -419,7 +419,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             print("sum: ",sum)    
             print("percent: ",percent)
             print("cal_phi_dich_vu: ",cal_phi_dich_vu)
-            if cal_phi_dich_vu != tien_phi_int:
+            if int(cal_phi_dich_vu) != tien_phi_int:
                 message.reply_text(
                     "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
                     f"👉 Tổng rút: {sum:,}đ\n"
@@ -598,7 +598,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             print("sum: ",sum)    
             print("percent: ",percent)
             print("cal_phi_dich_vu: ",cal_phi_dich_vu)  
-            if cal_phi_dich_vu != tien_phi_int:
+            if int(cal_phi_dich_vu) != tien_phi_int:
                 message.reply_text(
                     "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
                     f"👉 Tổng rút: {sum:,}đ\n"
