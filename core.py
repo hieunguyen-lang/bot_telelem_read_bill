@@ -411,12 +411,8 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             )
             
         if sum >10000000:
-            
-
-            try:
-                percent = parse_percent(caption['phi'])
-            except:
-                percent=0
+            print(caption)
+            percent = parse_percent(caption['phi'])
             
             cal_phi_dich_vu = sum * percent
             print("sum >10Tr")
@@ -426,8 +422,10 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             if cal_phi_dich_vu != tien_phi_int:
                 message.reply_text(
                     "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
-                    "👉 Sao chép phí đúng từ dòng bên dưới:\n\n"
-                    f"`{int(cal_phi_dich_vu)}`"
+                    f"👉 Tổng rút: {sum:,}đ\n"
+                    f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
+                    f"👉 Phí đúng phải là: {int(cal_phi_dich_vu):,}đ\n\n"
+                    f"Sao chép nhanh: /{int(cal_phi_dich_vu)}"
                 )
                 return   
         else:
@@ -490,10 +488,9 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         ten_ngan_hang=None
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
         for img_b64 in image_b64_list:
-            
+                    
             result = analyzer.analyze_bill_gpt(img_b64)
-            
-           
+                  
             if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
                 print("Cả ten_ngan_hang và so_hoa_don None")
                 continue
@@ -515,7 +512,6 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 ten_ngan_hang = result.get("ten_ngan_hang")
             
             
-
             row = [
                 timestamp,
                 full_name,
@@ -593,10 +589,9 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             
         if sum >10000000:
            
-            try:
-                percent = parse_percent(caption['phi'])
-            except:
-                percent=0
+            
+            percent = parse_percent(caption['phi'])
+            
             
             cal_phi_dich_vu = sum * percent 
             print("sum >10Tr")
@@ -606,8 +601,10 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             if cal_phi_dich_vu != tien_phi_int:
                 message.reply_text(
                     "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
-                    "👉 Sao chép phí đúng từ dòng bên dưới:\n\n"
-                    f"`{int(cal_phi_dich_vu)}`"
+                    f"👉 Tổng rút: {sum:,}đ\n"
+                    f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
+                    f"👉 Phí đúng phải là: {int(cal_phi_dich_vu):,}đ\n\n"
+                    f"Sao chép nhanh: /{int(cal_phi_dich_vu)}"
                 )
                 return
         else:
@@ -681,7 +678,7 @@ def parse_message_rut(text):
         "khach": r"Khach:\s*\{(.+?)\}",
         "sdt": r"Sdt:\s*\{(\d{9,11})\}",
         "rut": r"Rut:\s*\{(.+?)\}",
-        "phi": r"Phi:\s*\{([\d.]+%)\}",
+        "phi": r"Phi:\s*\{([\d.,]+%)\}",
         "tien_phi": r"(?:TienPhi|DienPhi):\s*\{(.+?)\}",
         "chuyen_khoan": r"ChuyenKhoan:\s*\{(.+?)\}",
         "lich_canh_bao": r"LichCanhBao:\s*\{(\d+)\}",
@@ -712,7 +709,7 @@ def parse_message_dao(text):
         "khach": r"Khach:\s*\{(.+?)\}",
         "sdt": r"Sdt:\s*\{(\d{9,11})\}",
         "dao": r"Dao:\s*\{([\d.,a-zA-Z ]+)\}",
-        "phi": r"Phi:\s*\{([\d.]+%)\}",
+        "phi": r"Phi:\s*\{([\d.,]+%)\}",
         "tien_phi": r"TienPhi:\s*\{([\d.,a-zA-Z ]+)\}",
         "rut_thieu": r"RutThieu:\s*\{([\d.,a-zA-Z ]+)\}",
         "tong": r"Tong:\s*\{([\d.,a-zA-Z ]+)\}",
