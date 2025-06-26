@@ -281,7 +281,14 @@ def parse_currency_input_int(value):
 
     except:
         return 0
-      
+def parse_percent(value: str) -> float:
+    if not value:
+        return 0.0
+    try:
+        cleaned = value.strip().replace('%', '').replace(',', '.')
+        return float(cleaned) / 100
+    except ValueError:
+        return 0.0      
 def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
     full_name = message.from_user.username
@@ -407,7 +414,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             
 
             try:
-                percent = float(caption['phi'].strip('%')) / 100
+                percent = parse_percent(caption['phi'])
             except:
                 percent=0
             
@@ -587,7 +594,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         if sum >10000000:
            
             try:
-                percent = float(caption['phi'].strip('%')) / 100
+                percent = parse_percent(caption['phi'])
             except:
                 percent=0
             
