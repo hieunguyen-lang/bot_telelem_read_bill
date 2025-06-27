@@ -21,5 +21,14 @@ CREATE TABLE IF NOT EXISTS thong_tin_hoa_don (
     ten_may_pos VARCHAR(100),
     lich_canh_bao VARCHAR(50),
     tien_phi VARCHAR(50),
-    caption_goc TEXT
+    batch_id VARCHAR(250),
+    caption_goc TEXT,
+    ket_toan VARCHAR(255),
+    phi_pos VARCHAR(255),
+    phi_thu_khach VARCHAR(255),
+    ck_khach_rut VARCHAR(255),
+    tien_ve_tk_cty VARCHAR(255),
+    tinh_trang VARCHAR(255),
+    lenh_treo VARCHAR(255),
+    ly_do VARCHAR(255)
 );

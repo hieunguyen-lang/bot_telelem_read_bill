@@ -63,4 +63,5 @@ tzdata==2025.2
 tzlocal==5.3.1
 uritemplate==4.2.0
 urllib3==2.5.0
+uuid==1.30
 websockets==15.0.1

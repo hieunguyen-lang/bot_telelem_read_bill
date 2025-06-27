@@ -1,5 +1,6 @@
 
 import base64
+import uuid
 
 import json
 import re
@@ -191,17 +192,18 @@ def handle_photo(update, context):
 def append_multiple_by_headers(sheet, data_dict_list):
     print("Append rows")
     headers = sheet.row_values(1)
+    num_columns = len(headers)
 
-    # ⚠️ Gán lại KẾT TOÁN nếu có, chỉ dòng đầu có giá trị
+    # ⚠️ Gán lại KẾT TOÁN nếu có
     if data_dict_list and "KẾT TOÁN" in data_dict_list[0]:
         value = data_dict_list[0]["KẾT TOÁN"]
         for i, item in enumerate(data_dict_list):
             item["KẾT TOÁN"] = value if i == 0 else ""
 
-    # Chuẩn bị dữ liệu theo headers
+    # Chuẩn bị dữ liệu
     rows_to_append = []
     for data_dict in data_dict_list:
-        row_data = [""] * len(headers)
+        row_data = [""] * num_columns
         for i, h in enumerate(headers):
             value = data_dict.get(h, "")
             if h in {"SỐ HÓA ĐƠN", "SỐ LÔ", "TID"} and isinstance(value, str) and value.startswith("0"):
@@ -210,15 +212,23 @@ def append_multiple_by_headers(sheet, data_dict_list):
                 row_data[i] = str(value)
         rows_to_append.append(row_data)
 
-    print("📌 Số dòng cần ghi:", len(rows_to_append))
     if not rows_to_append:
         print("⚠️ Không có dữ liệu để ghi.")
         return
 
-    # ✅ Ghi dữ liệu đơn giản, không merge
-    sheet.append_rows(rows_to_append, value_input_option="USER_ENTERED")
-    print(f"✅ Đã ghi {len(rows_to_append)} dòng vào Google Sheet.")
+    # 📌 Tìm dòng cuối có dữ liệu thực sự
+    existing_values = sheet.get_all_values()
+    last_row_index = len(existing_values) + 1  # +1 vì ghi bắt đầu dòng tiếp theo
 
+    # ✅ Ghi dữ liệu theo từng dòng
+    for i, row in enumerate(rows_to_append):
+        sheet.update(
+            f"A{last_row_index + i}:{chr(64 + num_columns)}{last_row_index + i}",
+            [row],
+            value_input_option="USER_ENTERED"
+        )
+
+    print(f"✅ Đã ghi {len(rows_to_append)} dòng vào từ dòng {last_row_index}.")
 def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
     """
     Tạo khóa duy nhất kiểm tra duplicate hóa đơn.
@@ -314,6 +324,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         sum=0
         ten_ngan_hang=None
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
+        batch_id =str(uuid.uuid4())
         for img_b64 in image_b64_list:
             
             result = analyzer.analyze_bill_gpt(img_b64)
@@ -357,6 +368,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("ten_may_pos"),
                 caption['lich_canh_bao'],
                 str(tien_phi_int),
+                batch_id,
                 message.caption
             ]
         
@@ -488,6 +500,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         sum= 0
         ten_ngan_hang=None
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
+        batch_id = str(uuid.uuid4())
         for img_b64 in image_b64_list:
                     
             result = analyzer.analyze_bill_gpt(img_b64)
@@ -531,6 +544,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("ten_may_pos"),
                 caption['lich_canh_bao'],
                 str(tien_phi_int),
+                batch_id,
                 message.caption
             ]
               # Ghi vào MySQL
@@ -669,8 +683,9 @@ def insert_bill_rows(db, list_rows):
             ten_may_pos,
             lich_canh_bao,
             tien_phi,
+            batch_id,
             caption_goc
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s,%s)
     """
     db.executemany(query, list_rows)
 
