@@ -1,5 +1,6 @@
 
 import base64
+import uuid
 
 import json
 import re
@@ -356,6 +357,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("ten_may_pos"),
                 caption['lich_canh_bao'],
                 str(tien_phi_int),
+                str(uuid.uuid4())
                 message.caption
             ]
         
@@ -530,6 +532,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("ten_may_pos"),
                 caption['lich_canh_bao'],
                 str(tien_phi_int),
+                str(uuid.uuid4())
                 message.caption
             ]
               # Ghi vào MySQL
@@ -664,8 +667,9 @@ def insert_bill_rows(db, list_rows):
             ten_may_pos,
             lich_canh_bao,
             tien_phi,
+            batch_id,
             caption_goc
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s,%s)
     """
     db.executemany(query, list_rows)
 
