@@ -357,7 +357,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("ten_may_pos"),
                 caption['lich_canh_bao'],
                 str(tien_phi_int),
-                str(uuid.uuid4())
+                str(uuid.uuid4()),
                 message.caption
             ]
         
@@ -532,7 +532,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("ten_may_pos"),
                 caption['lich_canh_bao'],
                 str(tien_phi_int),
-                str(uuid.uuid4())
+                str(uuid.uuid4()),
                 message.caption
             ]
               # Ghi vào MySQL
