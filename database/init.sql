@@ -4,7 +4,7 @@ USE bill_data;
 
 CREATE TABLE IF NOT EXISTS thong_tin_hoa_don (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    thoi_gian VARCHAR(255),
+    thoi_gian DATETIME,
     nguoi_gui VARCHAR(255),
     ten_khach VARCHAR(255),
     so_dien_thoai VARCHAR(20),
