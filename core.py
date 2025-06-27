@@ -314,6 +314,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         sum=0
         ten_ngan_hang=None
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
+        batch_id =str(uuid.uuid4())
         for img_b64 in image_b64_list:
             
             result = analyzer.analyze_bill_gpt(img_b64)
@@ -357,7 +358,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("ten_may_pos"),
                 caption['lich_canh_bao'],
                 str(tien_phi_int),
-                str(uuid.uuid4()),
+                batch_id,
                 message.caption
             ]
         
@@ -489,6 +490,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         sum= 0
         ten_ngan_hang=None
         tien_phi_int =parse_currency_input_int(caption['tien_phi'])
+        batch_id = str(uuid.uuid4())
         for img_b64 in image_b64_list:
                     
             result = analyzer.analyze_bill_gpt(img_b64)
@@ -532,7 +534,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("ten_may_pos"),
                 caption['lich_canh_bao'],
                 str(tien_phi_int),
-                str(uuid.uuid4()),
+                batch_id,
                 message.caption
             ]
               # Ghi vào MySQL
