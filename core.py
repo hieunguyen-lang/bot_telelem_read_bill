@@ -223,7 +223,8 @@ def append_multiple_by_headers(sheet, data_dict_list):
     for i, row in enumerate(rows_to_append):
         sheet.update(
             f"A{last_row_index + i}:{chr(64 + num_columns)}{last_row_index + i}",
-            [row]
+            [row],
+            value_input_option="USER_ENTERED"
         )
 
     print(f"✅ Đã ghi {len(rows_to_append)} dòng vào từ dòng {last_row_index}.")
