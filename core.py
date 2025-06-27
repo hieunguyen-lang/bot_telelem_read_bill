@@ -189,6 +189,7 @@ def handle_photo(update, context):
 
 
 def append_multiple_by_headers(sheet, data_dict_list):
+    print("Append rows")
     headers = sheet.row_values(1)
 
     # ⚠️ Gán lại KẾT TOÁN nếu có, chỉ dòng đầu có giá trị
@@ -599,13 +600,16 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             print("percent: ",percent)
             print("cal_phi_dich_vu: ",cal_phi_dich_vu)  
             if int(cal_phi_dich_vu) != tien_phi_int:
-                message.reply_text(
-                    "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
-                    f"👉 Tổng rút: {sum:,}đ\n"
-                    f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
-                    f"👉 Phí đúng phải là: {int(cal_phi_dich_vu):,}đ\n\n"
-                    f"Sao chép nhanh: /{int(cal_phi_dich_vu)}"
-                )
+                try:
+                    message.reply_text(
+                        "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
+                        f"👉 Tổng rút: {sum:,}đ\n"
+                        f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
+                        f"👉 Phí đúng phải là: {int(cal_phi_dich_vu):,}đ\n\n"
+                        f"Sao chép nhanh: /{int(cal_phi_dich_vu)}"
+                    )
+                except Exception as e:
+                    print("Lỗi khi gửi message:", e)
                 return
         else:
 
@@ -645,6 +649,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
 def insert_bill_rows(db, list_rows):
+    print("Insert DB")
     query = """
         INSERT INTO thong_tin_hoa_don (
             thoi_gian,
