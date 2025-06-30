@@ -44,7 +44,7 @@ class GPTBill_Analyzer:
             response = self.client.responses.create(
                 prompt={
                     "id": "pmpt_685c2e52caec8193a3e40f10de2c44430976694b2bec9c34",
-                    "version": "6"
+                    "version": "7"
                 },
                 input=[
                     

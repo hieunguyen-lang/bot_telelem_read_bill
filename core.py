@@ -296,10 +296,15 @@ def parse_percent(value: str) -> float:
     if not value:
         return 0.0
     try:
-        cleaned = value.strip().replace('%', '').replace(',', '.')
-        return float(cleaned) / 100
+        cleaned = value.strip().replace(',', '.')
+        if '%' in cleaned:
+            cleaned = cleaned.replace('%', '')
+            return float(cleaned) / 100
+        else:
+            return float(cleaned) / 100 if float(cleaned) > 1 else float(cleaned)
     except ValueError:
-        return 0.0      
+        return 0.0
+          
 def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
     full_name = message.from_user.username
@@ -369,7 +374,9 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 caption['lich_canh_bao'],
                 str(tien_phi_int),
                 batch_id,
-                message.caption
+                message.caption,
+                caption["stk"],
+                str(int(result.get("tong_so_tien")) - int(tien_phi_int)),
             ]
         
             data = {
@@ -545,7 +552,9 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 caption['lich_canh_bao'],
                 str(tien_phi_int),
                 batch_id,
-                message.caption
+                message.caption,
+                caption["stk"],
+                str(int(result.get("tong_so_tien")) - int(tien_phi_int)),
             ]
               # Ghi vào MySQL
             
@@ -684,8 +693,10 @@ def insert_bill_rows(db, list_rows):
             lich_canh_bao,
             tien_phi,
             batch_id,
-            caption_goc
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s,%s)
+            caption_goc,
+            stk_khach,
+            ck_khach_rut
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s,%s,%s,%s)
     """
     db.executemany(query, list_rows)
 
@@ -698,7 +709,7 @@ def parse_message_rut(text):
         "khach": r"Khach:\s*\{(.+?)\}",
         "sdt": r"Sdt:\s*\{(\d{9,11})\}",
         "rut": r"Rut:\s*\{(.+?)\}",
-        "phi": r"Phi:\s*\{([\d.,]+%)\}",
+        "phi": r"Phi:\s*\{([\d.,%]+)\}",
         "tien_phi": r"(?:TienPhi|DienPhi):\s*\{(.+?)\}",
         "chuyen_khoan": r"ChuyenKhoan:\s*\{(.+?)\}",
         "lich_canh_bao": r"LichCanhBao:\s*\{(\d+)\}",
@@ -729,11 +740,12 @@ def parse_message_dao(text):
         "khach": r"Khach:\s*\{(.+?)\}",
         "sdt": r"Sdt:\s*\{(\d{9,11})\}",
         "dao": r"Dao:\s*\{([\d.,a-zA-Z ]+)\}",
-        "phi": r"Phi:\s*\{([\d.,]+%)\}",
+        "phi": r"Phi:\s*\{([\d.,%]+)\}",
         "tien_phi": r"TienPhi:\s*\{([\d.,a-zA-Z ]+)\}",
         "rut_thieu": r"RutThieu:\s*\{([\d.,a-zA-Z ]+)\}",
         "tong": r"Tong:\s*\{([\d.,a-zA-Z ]+)\}",
         "lich_canh_bao": r"LichCanhBao:\s*\{(\d+)\}",
+        "stk": r"Stk:\s*(.+)",
         "note": r"Note:\s*\{(.+?)\}"
     }
 

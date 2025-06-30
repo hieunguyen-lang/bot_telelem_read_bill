@@ -30,5 +30,7 @@ CREATE TABLE IF NOT EXISTS thong_tin_hoa_don (
     tien_ve_tk_cty VARCHAR(255),
     tinh_trang VARCHAR(255),
     lenh_treo VARCHAR(255),
-    ly_do VARCHAR(255)
+    ly_do VARCHAR(255),
+    dia_chi VARCHAR(300),
+    stk_khach VARCHAR(300)
 );
