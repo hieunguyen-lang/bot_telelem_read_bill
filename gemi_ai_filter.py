@@ -10,25 +10,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def image_to_base64_data_url(image_path: str) -> str:
-    """
-    Đọc ảnh từ đường dẫn và trả về chuỗi base64 có prefix 'data:image/jpeg;base64,...'
-    Có thể dùng truyền vào API OpenAI hoặc hệ thống yêu cầu MIME chuẩn.
-    """
-    if not os.path.exists(image_path):
-        raise FileNotFoundError(f"Không tìm thấy file ảnh: {image_path}")
-
-    # Mở ảnh bằng PIL, encode thành JPEG và nạp vào bộ nhớ
-    with Image.open(image_path) as img:
-        buffered = BytesIO()
-        img.convert("RGB").save(buffered, format="JPEG")
-        img_bytes = buffered.getvalue()
-
-    # Encode base64 và thêm tiền tố
-    base64_string = base64.b64encode(img_bytes).decode("utf-8")
-    data_url = f"data:image/jpeg;base64,{base64_string}"
-    return data_url
-
 class GPTBill_Analyzer:
     def __init__(self):
         # Lấy thông tin xác thực mặc định từ môi trường (ADC - Application Default Credentials)
@@ -44,7 +25,7 @@ class GPTBill_Analyzer:
             response = self.client.responses.create(
                 prompt={
                     "id": "pmpt_685c2e52caec8193a3e40f10de2c44430976694b2bec9c34",
-                    "version": "7"
+                    "version": "9"
                 },
                 input=[
                     

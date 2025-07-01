@@ -1,7 +1,7 @@
 
 import base64
 import uuid
-
+from helpers import helper
 import json
 import re
 import threading
@@ -11,12 +11,13 @@ from oauth2client.service_account import ServiceAccountCredentials
 from telegram.ext import Updater, MessageHandler, Filters
 from telegram.ext import CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from io import BytesIO
+import base64
 from gemi_ai import GeminiBillAnalyzer
 from mysql_db_connector import MySQLConnector
 from redis_connect import RedisDuplicateChecker
 from gemi_ai_filter import GPTBill_Analyzer
-
+from rapidfuzz import fuzz
+import unicodedata
 from dotenv import load_dotenv
 load_dotenv()  # Tự động tìm và load từ .env
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -127,10 +128,9 @@ def handle_photo(update, context):
     user_id = message.from_user.id
 
     # Tải ảnh trước (phải làm trước khi xử lý ảnh đơn)
-    file = message.photo[-1].get_file()
-    bio = BytesIO()
-    file.download(out=bio)
-    img_b64 = base64.b64encode(bio.getvalue()).decode("utf-8")
+    
+    img_b64 = helper.process_telegram_photo_to_base64(message.photo[-1])
+    
     
     
     # 👉 Ảnh đơn → gán trực tiếp thành list
@@ -229,6 +229,23 @@ def append_multiple_by_headers(sheet, data_dict_list):
         )
 
     print(f"✅ Đã ghi {len(rows_to_append)} dòng vào từ dòng {last_row_index}.")
+
+def remove_accents(text: str) -> str:
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', text)
+        if unicodedata.category(c) != 'Mn'
+    )
+
+def contains_khach_moi(text: str, threshold: int = 85) -> bool:
+    normalized = remove_accents(text).lower()
+    # kiểm tra từng cụm từ
+    words = normalized.split()
+    for i in range(len(words) - 1):
+        phrase = f"{words[i]} {words[i+1]}"
+        if fuzz.ratio(phrase, "khach moi") >= threshold:
+            return True
+    return False
+
 def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
     """
     Tạo khóa duy nhất kiểm tra duplicate hóa đơn.
@@ -245,11 +262,10 @@ def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
         return (d.get(key) or '').strip().lower()
 
     key = "_".join([
+        safe_get(result, "sdt"),
         safe_get(result, "so_hoa_don"),
         safe_get(result, "so_lo"),
         safe_get(result, "tid"),
-        safe_get(result, "mid"),
-        safe_get(result, "ngay_giao_dich"),
         safe_get(result, "gio_giao_dich"),
         ten_ngan_hang
     ])
@@ -292,6 +308,7 @@ def parse_currency_input_int(value):
 
     except:
         return 0
+
 def parse_percent(value: str) -> float:
     if not value:
         return 0.0
@@ -377,6 +394,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 message.caption,
                 caption["stk"],
                 str(int(result.get("tong_so_tien")) - int(tien_phi_int)),
+                contains_khach_moi(caption['note'])
             ]
         
             data = {
@@ -555,6 +573,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 message.caption,
                 caption["stk"],
                 str(int(result.get("tong_so_tien")) - int(tien_phi_int)),
+                contains_khach_moi(caption['note'])
             ]
               # Ghi vào MySQL
             
@@ -577,7 +596,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             invoice_key = generate_invoice_key_simple(result, ten_ngan_hang)
             duplicate = redis.is_duplicate(invoice_key)
             #duplicate = False
-           
+            print("-------------Duplicate: ",duplicate)
             if duplicate ==True:
                 print("[DUPLICATE KEY]"+str(invoice_key))
                 message.reply_text(
@@ -695,8 +714,9 @@ def insert_bill_rows(db, list_rows):
             batch_id,
             caption_goc,
             stk_khach,
-            ck_khach_rut
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s,%s,%s,%s)
+            ck_khach_rut,
+            khach_moi
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s,%s,%s,%s,%s)
     """
     db.executemany(query, list_rows)
 
