@@ -123,19 +123,16 @@ def handle_photo(update, context):
     chat_id = update.effective_chat.id
     chat_title = update.effective_chat.title
     print(f"Ảnh gửi từ group {chat_title} (ID: {chat_id})")
+     # 👉 Bỏ qua nếu tin nhắn không có ảnh
     
     message = update.message
-    # ✅ Nếu đang chờ ảnh từ lệnh /anh
-    # ✅ Nếu đang chờ ảnh từ lệnh /anh
-    if context.user_data.get("waiting_for_photo"):
-        print("📥 Ảnh gửi từ chế độ /anh")
-        if not message or not message.photo:
-            #update.message.reply_text("⛔ Tin nhắn không có ảnh, bỏ qua.")
-            return
-     # 👉 Bỏ qua nếu tin nhắn không có ảnh
     if not message or not message.photo:
         print("⛔ Tin nhắn không có ảnh, bỏ qua.")
         return
+    if context.user_data.get("waiting_for_photo"):
+        print("⛔ Tin nhắn ko gửi sau /anh.")
+        return
+    
     # ❌ Bỏ qua nếu tin nhắn không đến từ group hợp lệ
     if str(chat_id) not in [str(GROUP_DAO_ID), str(GROUP_RUT_ID)]:
         print(f"⛔ Tin nhắn từ group lạ (ID: {chat_id}) → Bỏ qua")
@@ -756,7 +753,7 @@ def parse_message_rut(text):
     for key, pattern in patterns.items():
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
-            data[key] = match.group(1).strip()
+            data[key] = match.group(1).strip() if match else ""
 
     # Nếu không có note mà dòng cuối có thể là ghi chú
     last_line = text.strip().split('\n')[-1]
@@ -788,7 +785,7 @@ def parse_message_dao(text):
     for key, pattern in patterns.items():
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
-            data[key] = match.group(1).strip()
+            data[key] = match.group(1).strip() if match else ""
 
     # Nếu không có note mà dòng cuối là ghi chú thì gán
     last_line = text.strip().split('\n')[-1]
