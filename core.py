@@ -123,17 +123,22 @@ def handle_photo(update, context):
     chat_id = update.effective_chat.id
     chat_title = update.effective_chat.title
     print(f"Ảnh gửi từ group {chat_title} (ID: {chat_id})")
-    # ❌ Bỏ qua nếu tin nhắn không đến từ group hợp lệ
-    print(chat_id, type(chat_id))
-    print(GROUP_DAO_ID, type(GROUP_DAO_ID))
-    print(GROUP_RUT_ID, type(GROUP_RUT_ID))
-    if str(chat_id) not in [str(GROUP_DAO_ID), str(GROUP_RUT_ID)]:
-        print(f"⛔ Tin nhắn từ group lạ (ID: {chat_id}) → Bỏ qua")
-        return
+    
     message = update.message
+    # ✅ Nếu đang chờ ảnh từ lệnh /anh
+    # ✅ Nếu đang chờ ảnh từ lệnh /anh
+    if context.user_data.get("waiting_for_photo"):
+        print("📥 Ảnh gửi từ chế độ /anh")
+        if not message or not message.photo:
+            #update.message.reply_text("⛔ Tin nhắn không có ảnh, bỏ qua.")
+            return
      # 👉 Bỏ qua nếu tin nhắn không có ảnh
     if not message or not message.photo:
         print("⛔ Tin nhắn không có ảnh, bỏ qua.")
+        return
+    # ❌ Bỏ qua nếu tin nhắn không đến từ group hợp lệ
+    if str(chat_id) not in [str(GROUP_DAO_ID), str(GROUP_RUT_ID)]:
+        print(f"⛔ Tin nhắn từ group lạ (ID: {chat_id}) → Bỏ qua")
         return
     media_group_id = message.media_group_id or f"single_{message.message_id}"
     user_id = message.from_user.id
@@ -792,6 +797,9 @@ def parse_message_dao(text):
 
     return data
 
+def start_image_mode(update, context):
+    context.user_data["waiting_for_photo"] = True
+    update.message.reply_text("📸 Gửi ảnh hóa đơn cần xử lý:")
 # updater = Updater(
 #     token=TELEGRAM_TOKEN,
 #     request_kwargs={'proxy_url': PROXY_URL}
