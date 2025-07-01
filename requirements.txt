@@ -48,6 +48,7 @@ pytesseract==0.3.13
 python-dotenv==1.1.0
 python-telegram-bot==13.15
 pytz==2025.2
+RapidFuzz==3.13.0
 redis==6.2.0
 requests==2.32.4
 requests-oauthlib==2.0.0
