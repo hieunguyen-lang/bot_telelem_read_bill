@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS thong_tin_hoa_don (
     ly_do VARCHAR(255),
     dia_chi VARCHAR(300),
     stk_khach VARCHAR(300),
-    khach_moi boolean default FALSE null
+    khach_moi boolean default FALSE null,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
