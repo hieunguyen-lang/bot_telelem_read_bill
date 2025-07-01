@@ -796,7 +796,7 @@ def parse_message_dao(text):
 
 def start_image_mode(update, context):
     context.user_data["waiting_for_photo"] = True
-    update.message.reply_text("📸 Gửi ảnh hóa đơn cần xử lý trong 30 giây:")
+    update.message.reply_text("📸 Gửi ảnh hóa đơn cần xử lý trong 2 phút:")
 
     def timeout_clear():
         context.user_data["waiting_for_photo"] = False
@@ -806,7 +806,7 @@ def start_image_mode(update, context):
     if "waiting_timer" in context.user_data:
         context.user_data["waiting_timer"].cancel()
 
-    timer = threading.Timer(30.0, timeout_clear)
+    timer = threading.Timer(120.0, timeout_clear)
     timer.start()
     context.user_data["waiting_timer"] = timer
 # updater = Updater(
