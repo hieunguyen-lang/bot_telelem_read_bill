@@ -124,9 +124,10 @@ def handle_photo(update, context):
     chat_title = update.effective_chat.title
     print(f"Ảnh gửi từ group {chat_title} (ID: {chat_id})")
     # ❌ Bỏ qua nếu tin nhắn không đến từ group hợp lệ
-    print(GROUP_DAO_ID)
-    print(GROUP_RUT_ID)
-    if int(chat_id) not in [GROUP_DAO_ID, GROUP_RUT_ID]:
+    print(chat_id, type(chat_id))
+    print(GROUP_DAO_ID, type(GROUP_DAO_ID))
+    print(GROUP_RUT_ID, type(GROUP_RUT_ID))
+    if str(chat_id) not in [str(GROUP_DAO_ID), str(GROUP_RUT_ID)]:
         print(f"⛔ Tin nhắn từ group lạ (ID: {chat_id}) → Bỏ qua")
         return
     message = update.message
