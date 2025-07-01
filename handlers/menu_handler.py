@@ -68,7 +68,7 @@ def handle_text_search(update, context):
     keyword = update.message.text.strip()
 
     if not search_mode:
-        update.message.reply_text("❌ Bạn chưa chọn cách tra cứu. Dùng /menu trước.")
+        #update.message.reply_text("❌ Bạn chưa chọn cách tra cứu. Dùng /menu trước.")
         return
 
     # Ví dụ giả lập kết quả
