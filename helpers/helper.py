@@ -18,7 +18,7 @@ def process_telegram_photo_to_base64(message_photo, max_width=800, quality=70) -
         new_height = int(image.height * ratio)
         image = image.resize((max_width, new_height), Image.Resampling.LANCZOS)
 
-    image.save("resized_image.jpg", format="JPEG", quality=quality)
+    #image.save("resized_image.jpg", format="JPEG", quality=quality)
 
     resized_bio = BytesIO()
     image.save(resized_bio, format="JPEG", quality=quality)
