@@ -32,5 +32,6 @@ CREATE TABLE IF NOT EXISTS thong_tin_hoa_don (
     lenh_treo VARCHAR(255),
     ly_do VARCHAR(255),
     dia_chi VARCHAR(300),
-    stk_khach VARCHAR(300)
+    stk_khach VARCHAR(300),
+    khach_moi boolean default FALSE null
 );
