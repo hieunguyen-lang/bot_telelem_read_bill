@@ -129,7 +129,7 @@ def handle_photo(update, context):
     if not message or not message.photo:
         print("⛔ Tin nhắn không có ảnh, bỏ qua.")
         return
-    if context.user_data.get("waiting_for_photo"):
+    if not context.user_data.get("waiting_for_photo"):
         print("⛔ Tin nhắn ko gửi sau /anh.")
         return
     
@@ -796,7 +796,19 @@ def parse_message_dao(text):
 
 def start_image_mode(update, context):
     context.user_data["waiting_for_photo"] = True
-    update.message.reply_text("📸 Gửi ảnh hóa đơn cần xử lý:")
+    update.message.reply_text("📸 Gửi ảnh hóa đơn cần xử lý trong 30 giây:")
+
+    def timeout_clear():
+        context.user_data["waiting_for_photo"] = False
+        print("🕒 Hết thời gian chờ ảnh từ /anh")
+
+    # Hủy bỏ timeout cũ nếu có
+    if "waiting_timer" in context.user_data:
+        context.user_data["waiting_timer"].cancel()
+
+    timer = threading.Timer(30.0, timeout_clear)
+    timer.start()
+    context.user_data["waiting_timer"] = timer
 # updater = Updater(
 #     token=TELEGRAM_TOKEN,
 #     request_kwargs={'proxy_url': PROXY_URL}
