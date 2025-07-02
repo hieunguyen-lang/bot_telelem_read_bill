@@ -125,21 +125,23 @@ def handle_photo(update, context):
     print(f"Ảnh gửi từ group {chat_title} (ID: {chat_id})")
     
     # ❌ Bỏ qua nếu tin nhắn không đến từ group hợp lệ
-    print(chat_id, type(chat_id))
-    print(GROUP_DAO_ID, type(GROUP_DAO_ID))
-    print(GROUP_RUT_ID, type(GROUP_RUT_ID))
+    # print(chat_id, type(chat_id))
+    # print(GROUP_DAO_ID, type(GROUP_DAO_ID))
+    # print(GROUP_RUT_ID, type(GROUP_RUT_ID))
     if str(chat_id) not in [str(GROUP_DAO_ID), str(GROUP_RUT_ID)]:
         print(f"⛔ Tin nhắn từ group lạ (ID: {chat_id}) → Bỏ qua")
         return
     message = update.message
-    if not message.caption or ("{" not in message.caption and "}" not in message.caption):
-        print("⛔ Tin nhắn không { bỏ qua.")
-        return
+    media_group_id = message.media_group_id or f"single_{message.message_id}"
+    if message.media_group_id is None or media_group_id not in media_group_storage:
+        caption = message.caption or ""
+        if "{" not in caption or "}" not in caption:
+            return  # hoặc gửi cảnh báo
      # 👉 Bỏ qua nếu tin nhắn không có ảnh
     if not message or not message.photo:
         print("⛔ Tin nhắn không có ảnh, bỏ qua.")
         return
-    media_group_id = message.media_group_id or f"single_{message.message_id}"
+    
     user_id = message.from_user.id
 
     # Tải ảnh trước (phải làm trước khi xử lý ảnh đơn)
