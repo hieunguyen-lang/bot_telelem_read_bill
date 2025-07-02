@@ -247,21 +247,7 @@ def append_multiple_by_headers(sheet, data_dict_list):
 
     print(f"✅ Đã ghi {len(rows_to_append)} dòng vào từ dòng {last_row_index}.")
 
-def remove_accents(text: str) -> str:
-    return ''.join(
-        c for c in unicodedata.normalize('NFD', text)
-        if unicodedata.category(c) != 'Mn'
-    )
 
-def contains_khach_moi(text: str, threshold: int = 85) -> bool:
-    normalized = remove_accents(text).lower()
-    # kiểm tra từng cụm từ
-    words = normalized.split()
-    for i in range(len(words) - 1):
-        phrase = f"{words[i]} {words[i+1]}"
-        if fuzz.ratio(phrase, "khach moi") >= threshold:
-            return True
-    return False
 
 def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
     """
@@ -296,49 +282,7 @@ def format_currency_vn(value):
         return str(0)  # fallback nếu lỗi
 
 
-def parse_currency_input_int(value):
-    """
-    Chuyển chuỗi tiền tệ (kể cả có hậu tố k/m, dấu chấm, đ, ₫...) thành số nguyên.
-    """
-    if not value:
-        return 0
 
-    try:
-        if isinstance(value, (int, float)):
-            return int(value)
-
-        s = str(value).strip().lower().replace(",", ".").replace(" ", "")
-        
-        # Nếu có hậu tố k/m
-        km_match = re.match(r"([\d\.]+)([km])", s)
-        if km_match:
-            num, suffix = km_match.groups()
-            num = float(num)
-            if suffix == "k":
-                num *= 1_000
-            elif suffix == "m":
-                num *= 1_000_000
-            return int(num)
-
-        # Không có hậu tố → giữ lại toàn bộ số
-        digits_only = re.sub(r"[^\d]", "", s)
-        return int(digits_only) if digits_only else 0
-
-    except:
-        return 0
-
-def parse_percent(value: str) -> float:
-    if not value:
-        return 0.0
-    try:
-        cleaned = value.strip().replace(',', '.')
-        if '%' in cleaned:
-            cleaned = cleaned.replace('%', '')
-            return float(cleaned) / 100
-        else:
-            return float(cleaned) / 100 if float(cleaned) > 1 else float(cleaned)
-    except ValueError:
-        return 0.0
           
 def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
@@ -363,7 +307,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         list_invoice_key = []
         sum=0
         ten_ngan_hang=None
-        tien_phi_int =parse_currency_input_int(caption['tien_phi'])
+        tien_phi_int =helper.parse_currency_input_int(caption['tien_phi'])
         batch_id =str(uuid.uuid4())
         for img_b64 in image_b64_list:
             
@@ -412,10 +356,10 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 caption['lich_canh_bao'],
                 str(tien_phi_int),
                 batch_id,
-                message.caption,
+                caption['note'],
                 caption["stk"],
-                str(int(result.get("tong_so_tien")) - int(tien_phi_int)),
-                contains_khach_moi(caption['note'])
+                helper.contains_khach_moi(caption['note']),
+                0
             ]
         
             data = {
@@ -471,7 +415,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             
         if sum >10000000:
             print(caption)
-            percent = parse_percent(caption['phi'])
+            percent = helper.parse_percent(caption['phi'])
             
             cal_phi_dich_vu = sum * percent
             print("sum >10Tr")
@@ -491,9 +435,13 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             for row in list_row_insert_db:
                 # Giả sử cột 'tien_phi' nằm ở index 16
                 row[16] = tien_phi_int      
+        ck_khach  = helper.extract_amount_after_fee(caption['note'])
+        for row in list_row_insert_db:
                 
-        for item in list_invoice_key:
-            redis.mark_processed(item)
+                if ck_khach:
+                    row[21] = helper.parse_currency_input_int(ck_khach) 
+                else:
+                    row[21] = int(sum - int(tien_phi_int))
         for item in list_data:
             item["KẾT TOÁN"] = sum
             
@@ -511,10 +459,14 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             sheet = spreadsheet.worksheet("MPOS")
         else:
             sheet = spreadsheet.worksheet("MPOS")
-
-        insert_bill_rows(db,list_row_insert_db)
-        append_multiple_by_headers(sheet, list_data)
-
+        try:
+            insert_bill_rows(db,list_row_insert_db)
+            append_multiple_by_headers(sheet, list_data)
+        except Exception as e:
+            message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
+            return
+        for item in list_invoice_key:
+            redis.mark_processed(item)
         db.close()
         if res_mess:
             reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
@@ -547,7 +499,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
 
         sum= 0
         ten_ngan_hang=None
-        tien_phi_int =parse_currency_input_int(caption['tien_phi'])
+        tien_phi_int =helper.parse_currency_input_int(caption['tien_phi'])
         batch_id = str(uuid.uuid4())
         for img_b64 in image_b64_list:
                     
@@ -582,7 +534,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 full_name,
                 caption['khach'],
                 caption['sdt'],
-                "DAO",
+                "RUT",
                 ten_ngan_hang,
                 result.get("ngay_giao_dich"),
                 result.get("gio_giao_dich"),
@@ -596,10 +548,10 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 caption['lich_canh_bao'],
                 str(tien_phi_int),
                 batch_id,
-                message.caption,
+                caption['note'],
                 caption["stk"],
-                str(int(result.get("tong_so_tien")) - int(tien_phi_int)),
-                contains_khach_moi(caption['note'])
+                helper.contains_khach_moi(caption['note']),
+                0
             ]
               # Ghi vào MySQL
             
@@ -658,7 +610,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             
         if sum >10000000:
            
-            percent = parse_percent(caption['phi'])
+            percent = helper.parse_percent(caption['phi'])
             cal_phi_dich_vu = sum * percent 
             print("sum >10Tr")
             print("sum: ",sum)    
@@ -681,10 +633,14 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             
             for row in list_row_insert_db:
                 # Giả sử cột 'tien_phi' nằm ở index 16
-                row[16] = tien_phi_int   
-        print("Vào đây")
-        for item in list_invoice_key:
-            redis.mark_processed(item)
+                row[16] = tien_phi_int 
+        ck_khach  = helper.extract_amount_after_fee(caption['note'])
+        for row in list_row_insert_db:
+                
+                if ck_khach:
+                    row[21] = helper.parse_currency_input_int(ck_khach) 
+                else:
+                    row[21] = int(sum - int(tien_phi_int))
         for item in list_data:
             item["KẾT TOÁN"] = sum
 
@@ -702,9 +658,14 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         else:
                 sheet = spreadsheet.worksheet("MPOS")
 
-        insert_bill_rows(db,list_row_insert_db)
-        append_multiple_by_headers(sheet, list_data)   
-        
+        try:
+            insert_bill_rows(db,list_row_insert_db)
+            append_multiple_by_headers(sheet, list_data)
+        except Exception as e:
+            message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
+            return  
+        for item in list_invoice_key:
+            redis.mark_processed(item)
         db.close()
         if res_mess:
             reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
@@ -739,8 +700,8 @@ def insert_bill_rows(db, list_rows):
             batch_id,
             caption_goc,
             stk_khach,
-            ck_khach_rut,
-            khach_moi
+            khach_moi,
+            ck_khach_rut
         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s,%s,%s,%s,%s)
     """
     db.executemany(query, list_rows)
