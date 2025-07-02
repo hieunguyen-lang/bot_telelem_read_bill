@@ -507,6 +507,8 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             sheet = spreadsheet.worksheet("VP Bank")
         elif ten_ngan_hang =="MPOS":
             sheet = spreadsheet.worksheet("MPOS")
+        elif ten_ngan_hang is None:
+            sheet = spreadsheet.worksheet("MPOS")
         else:
             sheet = spreadsheet.worksheet("MPOS")
 
@@ -695,6 +697,8 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 sheet = spreadsheet.worksheet("VP Bank")
         elif ten_ngan_hang == "MPOS":
                 sheet = spreadsheet.worksheet("MPOS")
+        elif ten_ngan_hang is None:
+            sheet = spreadsheet.worksheet("MPOS")
         else:
                 sheet = spreadsheet.worksheet("MPOS")
 
