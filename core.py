@@ -96,7 +96,7 @@ def validate_caption(update, chat_id, caption):
             send_format_guide(missing_keys)
             return None, "❌ Thiếu key: " + ", ".join(missing_keys)
 
-        parsed = parse_message_dao(caption)
+        parsed = helper.parse_message_dao(caption)
         if 'dao' not in parsed:
             update.message.reply_text("❌ Lỗi: Không tìm thấy trường 'Dao' sau khi parse.")
             return None, "❌ parse_message_dao thiếu key 'dao'"
@@ -111,7 +111,7 @@ def validate_caption(update, chat_id, caption):
             send_format_guide(missing_keys)
             return None, "❌ Thiếu key: " + ", ".join(missing_keys)
 
-        parsed = parse_message_rut(caption)
+        parsed = helper.parse_message_rut(caption)
         if 'rut' not in parsed:
             update.message.reply_text("❌ Lỗi: Không tìm thấy trường 'Rut' sau khi parse.")
             return None, "❌ parse_message_rut thiếu key 'rut'"
@@ -247,43 +247,7 @@ def append_multiple_by_headers(sheet, data_dict_list):
 
     print(f"✅ Đã ghi {len(rows_to_append)} dòng vào từ dòng {last_row_index}.")
 
-
-
-def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
-    """
-    Tạo khóa duy nhất kiểm tra duplicate hóa đơn.
-    Ưu tiên các trường gần như không thể trùng nhau trong thực tế:
-    - Số hóa đơn
-    - Số lô
-    - Mã máy POS (TID)
-    - MID
-    - Ngày + Giờ giao dịch
-    - Tên ngân hàng
-    """
-    print("[Tạo key redis]")
-    def safe_get(d, key):
-        return (d.get(key) or '').strip().lower()
-
-    key = "_".join([
-        safe_get(result, "sdt"),
-        safe_get(result, "so_hoa_don"),
-        safe_get(result, "so_lo"),
-        safe_get(result, "tid"),
-        safe_get(result, "gio_giao_dich"),
-        safe_get(result, "tong_so_tien"),
-        ten_ngan_hang
-    ])
-    return key
-
-def format_currency_vn(value):
-    try:
-        return f"{int(value):,}".replace(",", ".")
-    except:
-        return str(0)  # fallback nếu lỗi
-
-
-
-          
+       
 def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
     full_name = message.from_user.username
@@ -359,7 +323,8 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 caption['note'],
                 caption["stk"],
                 helper.contains_khach_moi(caption['note']),
-                0
+                0,
+                str(helper.parse_percent(caption['phi']))
             ]
         
             data = {
@@ -368,7 +333,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "HỌ VÀ TÊN KHÁCH": caption['khach'],
                 "SĐT KHÁCH": caption['sdt'],
                 "ĐÁO / RÚT": "Đáo",
-                "SỐ TIỀN": format_currency_vn(result.get("tong_so_tien")),
+                "SỐ TIỀN": helper.format_currency_vn(result.get("tong_so_tien")),
                 "KẾT TOÁN": "kết toán",
                 "SỐ THẺ THẺ ĐÁO / RÚT": result.get("so_the"),
                 "TID": result.get("tid"),
@@ -378,7 +343,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "TÊN POS": result.get("ten_may_pos"),
                 "PHÍ DV": tien_phi_int,
             }
-            invoice_key = generate_invoice_key_simple(result, ten_ngan_hang)
+            invoice_key = helper.generate_invoice_key_simple(result, ten_ngan_hang)
             duplicate = redis.is_duplicate(invoice_key)
             #duplicate = False
             if duplicate:
@@ -406,7 +371,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             res_mess.append(
                 f"🏦 {ten_ngan_hang or 'Không rõ'} - "
                 f"👤 {caption['khach']} - "
-                f"💰 {format_currency_vn(result.get('tong_so_tien')) or '?'} - "
+                f"💰 {helper.format_currency_vn(result.get('tong_so_tien')) or '?'} - "
                 f"💰 {result.get('tid') or '?'} - "
                 f"📄 {result.get('so_hoa_don') or ''} - "
                 f"🧾 {result.get('so_lo') or ''} - "
@@ -551,7 +516,8 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 caption['note'],
                 caption["stk"],
                 helper.contains_khach_moi(caption['note']),
-                0
+                0,
+                str(helper.parse_percent(caption['phi']))
             ]
               # Ghi vào MySQL
             
@@ -561,7 +527,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "HỌ VÀ TÊN KHÁCH": caption['khach'],
                 "SĐT KHÁCH": caption['sdt'],
                 "ĐÁO / RÚT": "Rút",
-                "SỐ TIỀN": format_currency_vn(result.get("tong_so_tien")),
+                "SỐ TIỀN": helper.format_currency_vn(result.get("tong_so_tien")),
                 "KẾT TOÁN": "kết toán",
                 "SỐ THẺ THẺ ĐÁO / RÚT": result.get("so_the"),
                 "TID": result.get("tid"),
@@ -571,7 +537,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "TÊN POS": result.get("ten_may_pos"),
                 "PHÍ DV": tien_phi_int,
             }
-            invoice_key = generate_invoice_key_simple(result, ten_ngan_hang)
+            invoice_key = helper.generate_invoice_key_simple(result, ten_ngan_hang)
             duplicate = redis.is_duplicate(invoice_key)
             #duplicate = False
             print("-------------Duplicate: ",duplicate)
@@ -601,7 +567,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             res_mess.append(
                     f"🏦 {ten_ngan_hang or 'MPOS'} - "
                     f"👤 {caption['khach']} - "
-                    f"💰 {format_currency_vn(result.get('tong_so_tien')) or '?'} - "
+                    f"💰 {helper.format_currency_vn(result.get('tong_so_tien')) or '?'} - "
                     f"💰 {result.get('tid') or '?'} - "
                     f"📄 {result.get('so_hoa_don') or ''} - "
                     f"🧾 {result.get('so_lo') or ''} - "
@@ -701,80 +667,14 @@ def insert_bill_rows(db, list_rows):
             caption_goc,
             stk_khach,
             khach_moi,
-            ck_khach_rut
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s,%s,%s,%s,%s)
+            ck_khach_rut,
+            phan_tram_phi
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s,%s,%s,%s,%s ,%s)
     """
     db.executemany(query, list_rows)
 
-def parse_message_rut(text):
-    data = {}
-    if not text:
-        return None
-
-    patterns = {
-        "khach": r"Khach:\s*\{(.+?)\}",
-        "sdt": r"Sdt:\s*\{(\d{9,11})\}",
-        "rut": r"Rut:\s*\{(.+?)\}",
-        "phi": r"Phi:\s*\{([\d.,%]+)\}",
-        "tien_phi": r"(?:TienPhi|DienPhi):\s*\{(.+?)\}",
-        "chuyen_khoan": r"ChuyenKhoan:\s*\{(.+?)\}",
-        "lich_canh_bao": r"LichCanhBao:\s*\{(\d+)\}",
-        "stk": r"STK:\s*(?:\{)?(.+?)(?:\})?(?:\n|$)",
-        "note": r"Note:\s*\{(.+?)\}"
-    }
-
-    for key, pattern in patterns.items():
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            data[key] = match.group(1).strip()
-
-    # Nếu không có note mà dòng cuối có thể là ghi chú
-    last_line = text.strip().split('\n')[-1]
-    if 'note' not in data and not any(k.lower() in last_line.lower() for k in ['khach:', 'stk:', 'chuyenkhoan:', '{']):
-        data['note'] = last_line.strip()
-
-    return data
 
 
-def parse_message_dao(text):
-    data = {}
-    if not text:
-        return None
 
-    # Các pattern tương ứng với định dạng: Trường: {giá trị}
-    patterns = {
-        "khach": r"Khach:\s*\{(.+?)\}",
-        "sdt": r"Sdt:\s*\{(\d{9,11})\}",
-        "dao": r"Dao:\s*\{([\d.,a-zA-Z ]+)\}",
-        "phi": r"Phi:\s*\{([\d.,%]+)\}",
-        "tien_phi": r"TienPhi:\s*\{([\d.,a-zA-Z ]+)\}",
-        "rut_thieu": r"RutThieu:\s*\{([\d.,a-zA-Z ]+)\}",
-        "tong": r"Tong:\s*\{([\d.,a-zA-Z ]+)\}",
-        "lich_canh_bao": r"LichCanhBao:\s*\{(\d+)\}",
-        "stk": r"Stk:\s*(.+)",
-        "note": r"Note:\s*\{(.+?)\}"
-    }
 
-    for key, pattern in patterns.items():
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            data[key] = match.group(1).strip()
-
-    # Nếu không có note mà dòng cuối là ghi chú thì gán
-    last_line = text.strip().split('\n')[-1]
-    if 'note' not in data and not any(k in last_line.lower() for k in ['khach:', 'stk:', 'chuyenkhoan:', '{']):
-        data['note'] = last_line.strip()
-
-    return data
-
-# updater = Updater(
-#     token=TELEGRAM_TOKEN,
-#     request_kwargs={'proxy_url': PROXY_URL}
-# )
-
-# dp = updater.dispatcher
-# # Thứ tự rất quan trọng: handler kiểm tra group phải đứng trước
-# dp.add_handler(MessageHandler(Filters.photo, handle_photo))
-# updater.start_polling()
-# updater.idle()
 

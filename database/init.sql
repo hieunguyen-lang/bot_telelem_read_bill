@@ -29,10 +29,10 @@ CREATE TABLE IF NOT EXISTS thong_tin_hoa_don (
     ck_khach_rut VARCHAR(255),
     tien_ve_tk_cty VARCHAR(255),
     tinh_trang VARCHAR(255),
-    lenh_treo VARCHAR(255),
     ly_do VARCHAR(255),
     dia_chi VARCHAR(300),
     stk_khach VARCHAR(300),
+    phan_tram_phi VARCHAR(300),
     khach_moi boolean default FALSE null,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

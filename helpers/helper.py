@@ -106,3 +106,98 @@ def contains_khach_moi(text: str, threshold: int = 85) -> bool:
         if fuzz.ratio(phrase, "khach moi") >= threshold:
             return True
     return False
+
+
+def parse_message_rut(text):
+    data = {}
+    if not text:
+        return None
+
+    patterns = {
+        "khach": r"Khach:\s*\{(.+?)\}",
+        "sdt": r"Sdt:\s*\{(\d{9,11})\}",
+        "rut": r"Rut:\s*\{(.+?)\}",
+        "phi": r"Phi:\s*\{(.+?)\}",
+        "tien_phi": r"(?:TienPhi|DienPhi):\s*\{(.+?)\}",
+        "chuyen_khoan": r"ChuyenKhoan:\s*\{(.+?)\}",
+        "lich_canh_bao": r"LichCanhBao:\s*\{(\d+)\}",
+        "stk": r"STK:\s*(?:\{)?(.+?)(?:\})?(?:\n|$)",
+        "note": r"Note:\s*\{(.+?)\}"
+    }
+
+    for key, pattern in patterns.items():
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            data[key] = match.group(1).strip()
+
+    # Nếu không có note mà dòng cuối có thể là ghi chú
+    last_line = text.strip().split('\n')[-1]
+    if 'note' not in data and not any(k.lower() in last_line.lower() for k in ['khach:', 'stk:', 'chuyenkhoan:', '{']):
+        data['note'] = last_line.strip()
+
+    return data
+
+
+def parse_message_dao(text):
+    data = {}
+    if not text:
+        return None
+
+    # Các pattern tương ứng với định dạng: Trường: {giá trị}
+    patterns = {
+        "khach": r"Khach:\s*\{(.+?)\}",
+        "sdt": r"Sdt:\s*\{(\d{9,11})\}",
+        "dao": r"Dao:\s*\{([\d.,a-zA-Z ]+)\}",
+        "phi": r"Phi:\s*\{(.+?)\}",
+        "tien_phi": r"TienPhi:\s*\{([\d.,a-zA-Z ]+)\}",
+        "rut_thieu": r"RutThieu:\s*\{([\d.,a-zA-Z ]+)\}",
+        "tong": r"Tong:\s*\{([\d.,a-zA-Z ]+)\}",
+        "lich_canh_bao": r"LichCanhBao:\s*\{(\d+)\}",
+        "stk": r"Stk:\s*(.+)",
+        "note": r"Note:\s*\{(.+?)\}"
+    }
+
+    for key, pattern in patterns.items():
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            data[key] = match.group(1).strip()
+
+    # Nếu không có note mà dòng cuối là ghi chú thì gán
+    last_line = text.strip().split('\n')[-1]
+    if 'note' not in data and not any(k in last_line.lower() for k in ['khach:', 'stk:', 'chuyenkhoan:', '{']):
+        data['note'] = last_line.strip()
+
+    return data
+
+
+def format_currency_vn(value):
+    try:
+        return f"{int(value):,}".replace(",", ".")
+    except:
+        return str(0)  # fallback nếu lỗi
+    
+def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
+    """
+    Tạo khóa duy nhất kiểm tra duplicate hóa đơn.
+    Ưu tiên các trường gần như không thể trùng nhau trong thực tế:
+    - Số hóa đơn
+    - Số lô
+    - Mã máy POS (TID)
+    - MID
+    - Ngày + Giờ giao dịch
+    - Tên ngân hàng
+    """
+    print("[Tạo key redis]")
+    def safe_get(d, key):
+        return (d.get(key) or '').strip().lower()
+
+    key = "_".join([
+        safe_get(result, "sdt"),
+        safe_get(result, "so_hoa_don"),
+        safe_get(result, "so_lo"),
+        safe_get(result, "tid"),
+        safe_get(result, "gio_giao_dich"),
+        safe_get(result, "tong_so_tien"),
+        ten_ngan_hang
+    ])
+    return key
