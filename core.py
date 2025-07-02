@@ -132,10 +132,6 @@ def handle_photo(update, context):
     if not message or not message.photo:
         print("⛔ Tin nhắn không có ảnh, bỏ qua.")
         return
-    if not context.user_data.get("waiting_for_photo"):
-        print("⛔ Tin nhắn ko gửi sau /anh.")
-        return
-    
     # ❌ Bỏ qua nếu tin nhắn không đến từ group hợp lệ
     if str(chat_id) not in [str(GROUP_DAO_ID), str(GROUP_RUT_ID)]:
         print(f"⛔ Tin nhắn từ group lạ (ID: {chat_id}) → Bỏ qua")
@@ -797,21 +793,21 @@ def parse_message_dao(text):
 
     return data
 
-def start_image_mode(update, context):
-    context.user_data["waiting_for_photo"] = True
-    update.message.reply_text("📸 Gửi ảnh hóa đơn cần xử lý trong 2 phút:")
+# def start_image_mode(update, context):
+#     context.user_data["waiting_for_photo"] = True
+#     update.message.reply_text("📸 Gửi ảnh hóa đơn cần xử lý trong 2 phút:")
 
-    def timeout_clear():
-        context.user_data["waiting_for_photo"] = False
-        print("🕒 Hết thời gian chờ ảnh từ /anh")
+#     def timeout_clear():
+#         context.user_data["waiting_for_photo"] = False
+#         print("🕒 Hết thời gian chờ ảnh từ /anh")
 
-    # Hủy bỏ timeout cũ nếu có
-    if "waiting_timer" in context.user_data:
-        context.user_data["waiting_timer"].cancel()
+#     # Hủy bỏ timeout cũ nếu có
+#     if "waiting_timer" in context.user_data:
+#         context.user_data["waiting_timer"].cancel()
 
-    timer = threading.Timer(120.0, timeout_clear)
-    timer.start()
-    context.user_data["waiting_timer"] = timer
+#     timer = threading.Timer(120.0, timeout_clear)
+#     timer.start()
+#     context.user_data["waiting_timer"] = timer
 # updater = Updater(
 #     token=TELEGRAM_TOKEN,
 #     request_kwargs={'proxy_url': PROXY_URL}
