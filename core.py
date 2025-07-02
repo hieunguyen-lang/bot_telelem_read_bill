@@ -126,6 +126,9 @@ def handle_photo(update, context):
      # 👉 Bỏ qua nếu tin nhắn không có ảnh
     
     message = update.message
+    if "{" not in message.caption and "}" not in message.caption:
+        print("⛔ Tin nhắn chứa '{ }'")
+        return
     if not message or not message.photo:
         print("⛔ Tin nhắn không có ảnh, bỏ qua.")
         return
