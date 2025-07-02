@@ -284,6 +284,7 @@ def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
         safe_get(result, "so_lo"),
         safe_get(result, "tid"),
         safe_get(result, "gio_giao_dich"),
+        safe_get(result, "tong_so_tien"),
         ten_ngan_hang
     ])
     return key
@@ -507,7 +508,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         elif ten_ngan_hang =="MPOS":
             sheet = spreadsheet.worksheet("MPOS")
         else:
-            sheet = spreadsheet.worksheet("Unknown")
+            sheet = spreadsheet.worksheet("MPOS")
 
         insert_bill_rows(db,list_row_insert_db)
         append_multiple_by_headers(sheet, list_data)
@@ -655,15 +656,13 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             
         if sum >10000000:
            
-            
             percent = parse_percent(caption['phi'])
-            
-            
             cal_phi_dich_vu = sum * percent 
             print("sum >10Tr")
             print("sum: ",sum)    
             print("percent: ",percent)
-            print("cal_phi_dich_vu: ",cal_phi_dich_vu)  
+            print("cal_phi_dich_vu: ",int(cal_phi_dich_vu))  
+            print("tien_phi_int: ",tien_phi_int)
             if int(cal_phi_dich_vu) != tien_phi_int:
                 try:
                     message.reply_text(
@@ -677,11 +676,11 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                     print("Lỗi khi gửi message:", e)
                 return
         else:
-
+            
             for row in list_row_insert_db:
                 # Giả sử cột 'tien_phi' nằm ở index 16
                 row[16] = tien_phi_int   
-        
+        print("Vào đây")
         for item in list_invoice_key:
             redis.mark_processed(item)
         for item in list_data:
@@ -697,7 +696,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         elif ten_ngan_hang == "MPOS":
                 sheet = spreadsheet.worksheet("MPOS")
         else:
-                sheet = spreadsheet.worksheet("Unknown")
+                sheet = spreadsheet.worksheet("MPOS")
 
         insert_bill_rows(db,list_row_insert_db)
         append_multiple_by_headers(sheet, list_data)   
@@ -707,10 +706,9 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
         else:
             reply_msg = "⚠️ Không xử lý được hóa đơn nào."
-
         message.reply_text(reply_msg)
     except Exception as e:
-       
+        print(str(e))
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
 def insert_bill_rows(db, list_rows):

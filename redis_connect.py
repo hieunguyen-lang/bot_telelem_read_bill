@@ -26,3 +26,9 @@ class RedisDuplicateChecker:
         Đánh dấu hóa đơn đã xử lý.
         """
         self.client.sadd(self.key, invoice_id)
+
+    def remove_invoice(self, invoice_id):
+        """
+        Xóa một invoice_id khỏi danh sách đã xử lý.
+        """
+        self.client.srem(self.key, invoice_id)
