@@ -123,6 +123,7 @@ def handle_photo(update, context):
     chat_id = update.effective_chat.id
     chat_title = update.effective_chat.title
     print(f"Ảnh gửi từ group {chat_title} (ID: {chat_id})")
+    
     # ❌ Bỏ qua nếu tin nhắn không đến từ group hợp lệ
     print(chat_id, type(chat_id))
     print(GROUP_DAO_ID, type(GROUP_DAO_ID))
@@ -131,6 +132,9 @@ def handle_photo(update, context):
         print(f"⛔ Tin nhắn từ group lạ (ID: {chat_id}) → Bỏ qua")
         return
     message = update.message
+    if not message.caption or ("{" not in message.caption and "}" not in message.caption):
+        print("⛔ Tin nhắn không { bỏ qua.")
+        return
      # 👉 Bỏ qua nếu tin nhắn không có ảnh
     if not message or not message.photo:
         print("⛔ Tin nhắn không có ảnh, bỏ qua.")
@@ -374,6 +378,9 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             if result.get("so_lo") is None and result.get("tid") is None:
                 print("Cả so_lo và tid ")
                 continue
+            if result.get("loai_giao_dich") is  None : 
+                print("loai_giao_dich none")
+                continue
             if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
                 print("Đây là hóa đơn kết toán")
                 continue
@@ -552,6 +559,9 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 continue
             if result.get("so_lo") is None and result.get("tid") is None:
                 print("Cả so_lo và tid ")
+                continue
+            if result.get("loai_giao_dich") is  None : 
+                print("loai_giao_dich none")
                 continue
             if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
                 print("Đây là hóa đơn kết toán")
