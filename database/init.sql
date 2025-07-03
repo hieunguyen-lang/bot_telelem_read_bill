@@ -55,5 +55,6 @@ CREATE INDEX idx_users_username ON users(username);
 
 -- Insert default admin user (password: admin123)
 INSERT INTO users (email, username, hashed_password, role, is_active)
-VALUES ('admin@example.com', 'admin', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'admin', true)
-ON DUPLICATE KEY UPDATE username=username; 
+VALUES (2,'hieunkbb@gmail.com','hieunguyenkhac','$2b$12$BJcODXLEDQxukS6jHVFvxuDd7ymxIHlVn9VM7ZQMHk3.hwBQ/7pnK','admin',1,'2025-07-02 03:01:33','2025-07-02 03:02:10');
+
+UNLOCK TABLES;ON DUPLICATE KEY UPDATE username=username; 
