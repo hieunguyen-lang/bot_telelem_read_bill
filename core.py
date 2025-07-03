@@ -48,6 +48,7 @@ db = MySQLConnector(
 )
 media_group_storage = {}
 redis=RedisDuplicateChecker()
+
 def validate_caption(update, chat_id, caption):
     if not caption:
         return None, "❌ Không tìm thấy nội dung để xử lý. Vui lòng thêm caption cho ảnh."
@@ -69,17 +70,22 @@ def validate_caption(update, chat_id, caption):
     def send_format_guide(missing=None):
         message = "❌ Vui lòng sửa lại caption theo đúng định dạng yêu cầu.\n"
         if missing:
-            message += f"⚠️ Thiếu các trường sau: `{', '.join(missing)}`\n\n"
+            display_missing = helper.format_missing_keys(missing)
+            message += f"⚠️ Thiếu các trường sau: `{', '.join(display_missing)}`\n\n"
+
         message += (
-            "📌 Ví dụ:\n"
-            "`Khach: {Đặng Huỳnh Duyệt}`\n"
-            "`Sdt: {0969963324}`\n"
-            f"`{'Dao' if str(chat_id) == GROUP_DAO_ID else 'Rut'}: {{19M990}}`\n"
+            "📌 Ví dụ định dạng đúng:\n"
+            "`Khach: {Nguyễn Văn A}`\n"
+            "`Sdt: {0912345678}`\n"
+            "`Rut: {40.000M}` hoặc `Dao: {32.400M}`\n"
             "`Phi: {2%}`\n"
-            "`TienPhi: {400K}`\n"
-            "`Tong: {19M590}`\n"
-            "`LichCanhBao: {21}`\n"
-            "`Note: {Chuyển khoản hộ em với}`"
+            "`TienPhi: {800.000}`\n"
+            "`Tong: {40.800M}`\n"
+            "`LichCanhBao: {15}`\n"
+            "`ck_vao: {3.058M}`\n"
+            "`ck_ra: {0}`\n"
+            "`Stk: VPBANK - 0123456789 - Nguyễn Văn A`\n"
+            "`Note: {Khách chuyển khoản hộ em}`"
         )
         update.message.reply_text(message, parse_mode="Markdown")
 
@@ -88,30 +94,34 @@ def validate_caption(update, chat_id, caption):
 
     # Check theo nhóm
     if str(chat_id) == GROUP_DAO_ID:
-        required_keys = ['khach', 'sdt', 'dao', 'phi', 'tienphi', 'tong', 'lichcanhbao']
-        present_keys = extract_keys(caption)
+        required_keys = ["khach", "sdt", "dao", "phi", "tien_phi", "tong", "lich_canh_bao", "ck_vao", "ck_ra", "stk", "note"]
+    
+        present_dict = helper.parse_message_dao(caption)
+        present_keys =list(present_dict.keys())
         missing_keys = [key for key in required_keys if key not in present_keys]
 
         if missing_keys:
             send_format_guide(missing_keys)
             return None, "❌ Thiếu key: " + ", ".join(missing_keys)
 
-        parsed = parse_message_dao(caption)
+        parsed = helper.parse_message_dao(caption)
         if 'dao' not in parsed:
             update.message.reply_text("❌ Lỗi: Không tìm thấy trường 'Dao' sau khi parse.")
             return None, "❌ parse_message_dao thiếu key 'dao'"
         return parsed, None
 
     elif str(chat_id) == GROUP_RUT_ID:
-        required_keys = ['khach', 'sdt', 'rut', 'phi', 'tienphi', 'tong', 'lichcanhbao']
-        present_keys = extract_keys(caption)
+        required_keys = ["khach", "sdt", "rut", "phi", "tien_phi", "tong", "lich_canh_bao", "ck_vao", "ck_ra", "stk", "note"]
+
+        present_dict = helper.parse_message_rut(caption)
+        present_keys =list(present_dict.keys())
         missing_keys = [key for key in required_keys if key not in present_keys]
 
-        if missing_keys:
+        if missing_keys:    
             send_format_guide(missing_keys)
             return None, "❌ Thiếu key: " + ", ".join(missing_keys)
 
-        parsed = parse_message_rut(caption)
+        parsed = helper.parse_message_rut(caption)
         if 'rut' not in parsed:
             update.message.reply_text("❌ Lỗi: Không tìm thấy trường 'Rut' sau khi parse.")
             return None, "❌ parse_message_rut thiếu key 'rut'"
@@ -123,20 +133,25 @@ def handle_photo(update, context):
     chat_id = update.effective_chat.id
     chat_title = update.effective_chat.title
     print(f"Ảnh gửi từ group {chat_title} (ID: {chat_id})")
-     # 👉 Bỏ qua nếu tin nhắn không có ảnh
     
-    message = update.message
-    if "{" not in message.caption and "}" not in message.caption:
-        print("⛔ Tin nhắn chứa '{ }'")
-        return
-    if not message or not message.photo:
-        print("⛔ Tin nhắn không có ảnh, bỏ qua.")
-        return
     # ❌ Bỏ qua nếu tin nhắn không đến từ group hợp lệ
+    # print(chat_id, type(chat_id))
+    # print(GROUP_DAO_ID, type(GROUP_DAO_ID))
+    # print(GROUP_RUT_ID, type(GROUP_RUT_ID))
     if str(chat_id) not in [str(GROUP_DAO_ID), str(GROUP_RUT_ID)]:
         print(f"⛔ Tin nhắn từ group lạ (ID: {chat_id}) → Bỏ qua")
         return
+    message = update.message
     media_group_id = message.media_group_id or f"single_{message.message_id}"
+    if message.media_group_id is None or media_group_id not in media_group_storage:
+        caption = message.caption or ""
+        if "{" not in caption or "}" not in caption:
+            return  # hoặc gửi cảnh báo
+     # 👉 Bỏ qua nếu tin nhắn không có ảnh
+    if not message or not message.photo:
+        print("⛔ Tin nhắn không có ảnh, bỏ qua.")
+        return
+    
     user_id = message.from_user.id
 
     # Tải ảnh trước (phải làm trước khi xử lý ảnh đơn)
@@ -242,107 +257,16 @@ def append_multiple_by_headers(sheet, data_dict_list):
 
     print(f"✅ Đã ghi {len(rows_to_append)} dòng vào từ dòng {last_row_index}.")
 
-def remove_accents(text: str) -> str:
-    return ''.join(
-        c for c in unicodedata.normalize('NFD', text)
-        if unicodedata.category(c) != 'Mn'
-    )
-
-def contains_khach_moi(text: str, threshold: int = 85) -> bool:
-    normalized = remove_accents(text).lower()
-    # kiểm tra từng cụm từ
-    words = normalized.split()
-    for i in range(len(words) - 1):
-        phrase = f"{words[i]} {words[i+1]}"
-        if fuzz.ratio(phrase, "khach moi") >= threshold:
-            return True
-    return False
-
-def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
-    """
-    Tạo khóa duy nhất kiểm tra duplicate hóa đơn.
-    Ưu tiên các trường gần như không thể trùng nhau trong thực tế:
-    - Số hóa đơn
-    - Số lô
-    - Mã máy POS (TID)
-    - MID
-    - Ngày + Giờ giao dịch
-    - Tên ngân hàng
-    """
-    print("[Tạo key redis]")
-    def safe_get(d, key):
-        return (d.get(key) or '').strip().lower()
-
-    key = "_".join([
-        safe_get(result, "sdt"),
-        safe_get(result, "so_hoa_don"),
-        safe_get(result, "so_lo"),
-        safe_get(result, "tid"),
-        safe_get(result, "gio_giao_dich"),
-        ten_ngan_hang
-    ])
-    return key
-
-def format_currency_vn(value):
-    try:
-        return f"{int(value):,}".replace(",", ".")
-    except:
-        return str(0)  # fallback nếu lỗi
-
-
-def parse_currency_input_int(value):
-    """
-    Chuyển chuỗi tiền tệ (kể cả có hậu tố k/m, dấu chấm, đ, ₫...) thành số nguyên.
-    """
-    if not value:
-        return 0
-
-    try:
-        if isinstance(value, (int, float)):
-            return int(value)
-
-        s = str(value).strip().lower().replace(",", ".").replace(" ", "")
-        
-        # Nếu có hậu tố k/m
-        km_match = re.match(r"([\d\.]+)([km])", s)
-        if km_match:
-            num, suffix = km_match.groups()
-            num = float(num)
-            if suffix == "k":
-                num *= 1_000
-            elif suffix == "m":
-                num *= 1_000_000
-            return int(num)
-
-        # Không có hậu tố → giữ lại toàn bộ số
-        digits_only = re.sub(r"[^\d]", "", s)
-        return int(digits_only) if digits_only else 0
-
-    except:
-        return 0
-
-def parse_percent(value: str) -> float:
-    if not value:
-        return 0.0
-    try:
-        cleaned = value.strip().replace(',', '.')
-        if '%' in cleaned:
-            cleaned = cleaned.replace('%', '')
-            return float(cleaned) / 100
-        else:
-            return float(cleaned) / 100 if float(cleaned) > 1 else float(cleaned)
-    except ValueError:
-        return 0.0
-          
+       
 def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RUT_ID):
     message = update.message
     full_name = message.from_user.username
     timestamp = message.date.strftime("%Y-%m-%d %H:%M:%S")
     image_b64_list = context.user_data.get("image_data", [])
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
-    print(f"Đang xử lý ảnh từ {full_name} ({message.from_user.id}) - {timestamp}")
     print(f"Caption: {caption}")
-
+    ck_vao_int = helper.parse_currency_input_int(caption.get("ck_vao"))
+    ck_ra_int = helper.parse_currency_input_int(caption.get("ck_ra"))
     try:
         if not image_b64_list:
             message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
@@ -357,7 +281,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         list_invoice_key = []
         sum=0
         ten_ngan_hang=None
-        tien_phi_int =parse_currency_input_int(caption['tien_phi'])
+        tien_phi_int =helper.parse_currency_input_int(caption['tien_phi'])
         batch_id =str(uuid.uuid4())
         for img_b64 in image_b64_list:
             
@@ -374,6 +298,9 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 continue
             if result.get("so_lo") is None and result.get("tid") is None:
                 print("Cả so_lo và tid ")
+                continue
+            if result.get("loai_giao_dich") is  None : 
+                print("loai_giao_dich none")
                 continue
             if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
                 print("Đây là hóa đơn kết toán")
@@ -400,13 +327,16 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("so_lo"),
                 result.get("so_hoa_don"),    
                 result.get("ten_may_pos"),
-                caption['lich_canh_bao'],
+                caption.get('lich_canh_bao'),
                 str(tien_phi_int),
                 batch_id,
-                message.caption,
-                caption["stk"],
-                str(int(result.get("tong_so_tien")) - int(tien_phi_int)),
-                contains_khach_moi(caption['note'])
+                caption.get('note'),
+                helper.contains_khach_moi(caption.get('note', '')),
+                str(ck_ra_int),
+                str(ck_vao_int),
+                None,  # stk_cty
+                None,  # stk_khach
+                str(helper.parse_percent(caption.get('phi', '')))
             ]
         
             data = {
@@ -415,7 +345,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "HỌ VÀ TÊN KHÁCH": caption['khach'],
                 "SĐT KHÁCH": caption['sdt'],
                 "ĐÁO / RÚT": "Đáo",
-                "SỐ TIỀN": format_currency_vn(result.get("tong_so_tien")),
+                "SỐ TIỀN": helper.format_currency_vn(result.get("tong_so_tien")),
                 "KẾT TOÁN": "kết toán",
                 "SỐ THẺ THẺ ĐÁO / RÚT": result.get("so_the"),
                 "TID": result.get("tid"),
@@ -425,7 +355,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "TÊN POS": result.get("ten_may_pos"),
                 "PHÍ DV": tien_phi_int,
             }
-            invoice_key = generate_invoice_key_simple(result, ten_ngan_hang)
+            invoice_key = helper.generate_invoice_key_simple(result, ten_ngan_hang)
             duplicate = redis.is_duplicate(invoice_key)
             #duplicate = False
             if duplicate:
@@ -453,7 +383,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             res_mess.append(
                 f"🏦 {ten_ngan_hang or 'Không rõ'} - "
                 f"👤 {caption['khach']} - "
-                f"💰 {format_currency_vn(result.get('tong_so_tien')) or '?'} - "
+                f"💰 {helper.format_currency_vn(result.get('tong_so_tien')) or '?'} - "
                 f"💰 {result.get('tid') or '?'} - "
                 f"📄 {result.get('so_hoa_don') or ''} - "
                 f"🧾 {result.get('so_lo') or ''} - "
@@ -462,7 +392,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             
         if sum >10000000:
             print(caption)
-            percent = parse_percent(caption['phi'])
+            percent = helper.parse_percent(caption['phi'])
             
             cal_phi_dich_vu = sum * percent
             print("sum >10Tr")
@@ -481,10 +411,30 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         else:
             for row in list_row_insert_db:
                 # Giả sử cột 'tien_phi' nằm ở index 16
-                row[16] = tien_phi_int      
-                
-        for item in list_invoice_key:
-            redis.mark_processed(item)
+                row[16] = tien_phi_int  
+        is_tienmat  = helper.is_cash_related(caption['note'])    
+        # Gán stk_khach và stk_cty mặc định
+        stk_khach = None
+        stk_cty = None
+        print("-----------------Gán stk--------------")
+        if ck_ra_int == 0 and ck_vao_int !=0:
+            stk_khach = ''
+            stk_cty = caption.get("stk")
+        elif ck_ra_int != 0 and ck_vao_int ==0:
+            stk_khach = caption.get("stk")
+            stk_cty = ''
+        elif is_tienmat:
+            stk_khach = ''
+            stk_cty = "Tiền mặt"
+        print("ck_vao_int: ",ck_vao_int)
+        print("ck_ra_int: ",ck_ra_int)
+        print("stk_khach: ",stk_khach)
+        print("stk_cty: ",stk_cty)
+        for row in list_row_insert_db:
+            if stk_khach is not None:
+                row[22] = stk_khach  # vị trí stk_khach
+            if stk_cty is not None:
+                row[23] = stk_cty    # vị trí stk_cty
         for item in list_data:
             item["KẾT TOÁN"] = sum
             
@@ -498,12 +448,18 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             sheet = spreadsheet.worksheet("VP Bank")
         elif ten_ngan_hang =="MPOS":
             sheet = spreadsheet.worksheet("MPOS")
+        elif ten_ngan_hang is None:
+            sheet = spreadsheet.worksheet("MPOS")
         else:
-            sheet = spreadsheet.worksheet("Unknown")
-
-        insert_bill_rows(db,list_row_insert_db)
-        append_multiple_by_headers(sheet, list_data)
-
+            sheet = spreadsheet.worksheet("MPOS")
+        try:
+            insert_bill_rows(db,list_row_insert_db)
+            append_multiple_by_headers(sheet, list_data)
+        except Exception as e:
+            message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
+            return
+        for item in list_invoice_key:
+            redis.mark_processed(item)
         db.close()
         if res_mess:
             reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
@@ -521,6 +477,8 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
     image_b64_list = context.user_data.get("image_data", [])
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
     print(caption)
+    ck_vao_int = helper.parse_currency_input_int(caption.get("ck_vao"))
+    ck_ra_int = helper.parse_currency_input_int(caption.get("ck_ra"))
     try:
         if not image_b64_list:
             message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
@@ -536,7 +494,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
 
         sum= 0
         ten_ngan_hang=None
-        tien_phi_int =parse_currency_input_int(caption['tien_phi'])
+        tien_phi_int =helper.parse_currency_input_int(caption['tien_phi'])
         batch_id = str(uuid.uuid4())
         for img_b64 in image_b64_list:
                     
@@ -554,6 +512,9 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             if result.get("so_lo") is None and result.get("tid") is None:
                 print("Cả so_lo và tid ")
                 continue
+            if result.get("loai_giao_dich") is  None : 
+                print("loai_giao_dich none")
+                continue
             if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
                 print("Đây là hóa đơn kết toán")
                 continue
@@ -566,9 +527,9 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             row = [
                 timestamp,
                 full_name,
-                caption['khach'],
-                caption['sdt'],
-                "DAO",
+                caption.get('khach'),
+                caption.get('sdt'),
+                "RUT",
                 ten_ngan_hang,
                 result.get("ngay_giao_dich"),
                 result.get("gio_giao_dich"),
@@ -577,15 +538,18 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("tid"),
                 result.get("mid"),
                 result.get("so_lo"),
-                result.get("so_hoa_don"),    
+                result.get("so_hoa_don"),
                 result.get("ten_may_pos"),
-                caption['lich_canh_bao'],
+                caption.get('lich_canh_bao'),
                 str(tien_phi_int),
                 batch_id,
-                message.caption,
-                caption["stk"],
-                str(int(result.get("tong_so_tien")) - int(tien_phi_int)),
-                contains_khach_moi(caption['note'])
+                caption.get('note'),
+                helper.contains_khach_moi(caption.get('note', '')),
+                str(ck_ra_int),
+                str(ck_vao_int),
+                None,  # stk_cty
+                None,  # stk_khach
+                str(helper.parse_percent(caption.get('phi', '')))
             ]
               # Ghi vào MySQL
             
@@ -595,7 +559,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "HỌ VÀ TÊN KHÁCH": caption['khach'],
                 "SĐT KHÁCH": caption['sdt'],
                 "ĐÁO / RÚT": "Rút",
-                "SỐ TIỀN": format_currency_vn(result.get("tong_so_tien")),
+                "SỐ TIỀN": helper.format_currency_vn(result.get("tong_so_tien")),
                 "KẾT TOÁN": "kết toán",
                 "SỐ THẺ THẺ ĐÁO / RÚT": result.get("so_the"),
                 "TID": result.get("tid"),
@@ -605,7 +569,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "TÊN POS": result.get("ten_may_pos"),
                 "PHÍ DV": tien_phi_int,
             }
-            invoice_key = generate_invoice_key_simple(result, ten_ngan_hang)
+            invoice_key = helper.generate_invoice_key_simple(result, ten_ngan_hang)
             duplicate = redis.is_duplicate(invoice_key)
             #duplicate = False
             print("-------------Duplicate: ",duplicate)
@@ -635,7 +599,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             res_mess.append(
                     f"🏦 {ten_ngan_hang or 'MPOS'} - "
                     f"👤 {caption['khach']} - "
-                    f"💰 {format_currency_vn(result.get('tong_so_tien')) or '?'} - "
+                    f"💰 {helper.format_currency_vn(result.get('tong_so_tien')) or '?'} - "
                     f"💰 {result.get('tid') or '?'} - "
                     f"📄 {result.get('so_hoa_don') or ''} - "
                     f"🧾 {result.get('so_lo') or ''} - "
@@ -644,15 +608,13 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             
         if sum >10000000:
            
-            
-            percent = parse_percent(caption['phi'])
-            
-            
+            percent = helper.parse_percent(caption['phi'])
             cal_phi_dich_vu = sum * percent 
             print("sum >10Tr")
             print("sum: ",sum)    
             print("percent: ",percent)
-            print("cal_phi_dich_vu: ",cal_phi_dich_vu)  
+            print("cal_phi_dich_vu: ",int(cal_phi_dich_vu))  
+            print("tien_phi_int: ",tien_phi_int)
             if int(cal_phi_dich_vu) != tien_phi_int:
                 try:
                     message.reply_text(
@@ -666,13 +628,34 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                     print("Lỗi khi gửi message:", e)
                 return
         else:
-
+            
             for row in list_row_insert_db:
                 # Giả sử cột 'tien_phi' nằm ở index 16
-                row[16] = tien_phi_int   
-        
-        for item in list_invoice_key:
-            redis.mark_processed(item)
+                row[16] = tien_phi_int 
+        is_tienmat  = helper.is_cash_related(caption['note'])
+        # Gán stk_khach và stk_cty mặc định
+        stk_khach = None
+        stk_cty = None
+        print("-----------------Gán stk--------------")
+        if ck_ra_int == 0 and ck_vao_int !=0:
+            stk_khach = ''
+            stk_cty = caption.get("stk")
+        elif ck_ra_int != 0 and ck_vao_int ==0:
+            stk_khach = caption.get("stk")
+            stk_cty = ''
+        elif is_tienmat:
+            stk_khach = ''
+            stk_cty = "Tiền mặt"
+        print("ck_vao_int: ",ck_vao_int)
+        print("ck_ra_int: ",ck_ra_int)
+        print("stk_khach: ",stk_khach)
+        print("stk_cty: ",stk_cty)
+        for row in list_row_insert_db:
+            if stk_khach is not None:
+                row[22] = stk_khach  # vị trí stk_khach
+            if stk_cty is not None:
+                row[23] = stk_cty    # vị trí stk_cty
+                
         for item in list_data:
             item["KẾT TOÁN"] = sum
 
@@ -685,21 +668,27 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 sheet = spreadsheet.worksheet("VP Bank")
         elif ten_ngan_hang == "MPOS":
                 sheet = spreadsheet.worksheet("MPOS")
+        elif ten_ngan_hang is None:
+            sheet = spreadsheet.worksheet("MPOS")
         else:
-                sheet = spreadsheet.worksheet("Unknown")
+                sheet = spreadsheet.worksheet("MPOS")
 
-        insert_bill_rows(db,list_row_insert_db)
-        append_multiple_by_headers(sheet, list_data)   
-        
+        try:
+            insert_bill_rows(db,list_row_insert_db)
+            append_multiple_by_headers(sheet, list_data)
+        except Exception as e:
+            message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
+            return  
+        for item in list_invoice_key:
+            redis.mark_processed(item)
         db.close()
         if res_mess:
             reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
         else:
             reply_msg = "⚠️ Không xử lý được hóa đơn nào."
-
         message.reply_text(reply_msg)
     except Exception as e:
-       
+        print(str(e))
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
 def insert_bill_rows(db, list_rows):
@@ -725,97 +714,18 @@ def insert_bill_rows(db, list_rows):
             tien_phi,
             batch_id,
             caption_goc,
+            khach_moi,
+            ck_ra,
+            ck_vao,
             stk_khach,
-            ck_khach_rut,
-            khach_moi
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s,%s,%s,%s,%s)
+            stk_cty,
+            phan_tram_phi
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     db.executemany(query, list_rows)
 
-def parse_message_rut(text):
-    data = {}
-    if not text:
-        return None
-
-    patterns = {
-        "khach": r"Khach:\s*\{(.+?)\}",
-        "sdt": r"Sdt:\s*\{(\d{9,11})\}",
-        "rut": r"Rut:\s*\{(.+?)\}",
-        "phi": r"Phi:\s*\{([\d.,%]+)\}",
-        "tien_phi": r"(?:TienPhi|DienPhi):\s*\{(.+?)\}",
-        "chuyen_khoan": r"ChuyenKhoan:\s*\{(.+?)\}",
-        "lich_canh_bao": r"LichCanhBao:\s*\{(\d+)\}",
-        "stk": r"STK:\s*(?:\{)?(.+?)(?:\})?(?:\n|$)",
-        "note": r"Note:\s*\{(.+?)\}"
-    }
-
-    for key, pattern in patterns.items():
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            data[key] = match.group(1).strip() if match else ""
-
-    # Nếu không có note mà dòng cuối có thể là ghi chú
-    last_line = text.strip().split('\n')[-1]
-    if 'note' not in data and not any(k.lower() in last_line.lower() for k in ['khach:', 'stk:', 'chuyenkhoan:', '{']):
-        data['note'] = last_line.strip()
-
-    return data
 
 
-def parse_message_dao(text):
-    data = {}
-    if not text:
-        return None
 
-    # Các pattern tương ứng với định dạng: Trường: {giá trị}
-    patterns = {
-        "khach": r"Khach:\s*\{(.+?)\}",
-        "sdt": r"Sdt:\s*\{(\d{9,11})\}",
-        "dao": r"Dao:\s*\{([\d.,a-zA-Z ]+)\}",
-        "phi": r"Phi:\s*\{([\d.,%]+)\}",
-        "tien_phi": r"TienPhi:\s*\{([\d.,a-zA-Z ]+)\}",
-        "rut_thieu": r"RutThieu:\s*\{([\d.,a-zA-Z ]+)\}",
-        "tong": r"Tong:\s*\{([\d.,a-zA-Z ]+)\}",
-        "lich_canh_bao": r"LichCanhBao:\s*\{(\d+)\}",
-        "stk": r"Stk:\s*(.+)",
-        "note": r"Note:\s*\{(.+?)\}"
-    }
 
-    for key, pattern in patterns.items():
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            data[key] = match.group(1).strip() if match else ""
-
-    # Nếu không có note mà dòng cuối là ghi chú thì gán
-    last_line = text.strip().split('\n')[-1]
-    if 'note' not in data and not any(k in last_line.lower() for k in ['khach:', 'stk:', 'chuyenkhoan:', '{']):
-        data['note'] = last_line.strip()
-
-    return data
-
-# def start_image_mode(update, context):
-#     context.user_data["waiting_for_photo"] = True
-#     update.message.reply_text("📸 Gửi ảnh hóa đơn cần xử lý trong 2 phút:")
-
-#     def timeout_clear():
-#         context.user_data["waiting_for_photo"] = False
-#         print("🕒 Hết thời gian chờ ảnh từ /anh")
-
-#     # Hủy bỏ timeout cũ nếu có
-#     if "waiting_timer" in context.user_data:
-#         context.user_data["waiting_timer"].cancel()
-
-#     timer = threading.Timer(120.0, timeout_clear)
-#     timer.start()
-#     context.user_data["waiting_timer"] = timer
-# updater = Updater(
-#     token=TELEGRAM_TOKEN,
-#     request_kwargs={'proxy_url': PROXY_URL}
-# )
-
-# dp = updater.dispatcher
-# # Thứ tự rất quan trọng: handler kiểm tra group phải đứng trước
-# dp.add_handler(MessageHandler(Filters.photo, handle_photo))
-# updater.start_polling()
-# updater.idle()
 

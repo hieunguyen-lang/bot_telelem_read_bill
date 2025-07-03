@@ -24,15 +24,14 @@ CREATE TABLE IF NOT EXISTS thong_tin_hoa_don (
     batch_id VARCHAR(250),
     caption_goc TEXT,
     ket_toan VARCHAR(255),
-    phi_pos VARCHAR(255),
-    phi_thu_khach VARCHAR(255),
-    ck_khach_rut VARCHAR(255),
-    tien_ve_tk_cty VARCHAR(255),
+    ck_ra VARCHAR(255),
+    ck_vao VARCHAR(255),
+    stk_khach VARCHAR(255),
+    stk_cty VARCHAR(255),
     tinh_trang VARCHAR(255),
-    lenh_treo VARCHAR(255),
     ly_do VARCHAR(255),
     dia_chi VARCHAR(300),
-    stk_khach VARCHAR(300),
+    phan_tram_phi VARCHAR(300),
     khach_moi boolean default FALSE null,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -56,5 +55,6 @@ CREATE INDEX idx_users_username ON users(username);
 
 -- Insert default admin user (password: admin123)
 INSERT INTO users (email, username, hashed_password, role, is_active)
-VALUES ('admin@example.com', 'admin', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'admin', true)
-ON DUPLICATE KEY UPDATE username=username; 
+VALUES (2,'hieunkbb@gmail.com','hieunguyenkhac','$2b$12$BJcODXLEDQxukS6jHVFvxuDd7ymxIHlVn9VM7ZQMHk3.hwBQ/7pnK','admin',1,'2025-07-02 03:01:33','2025-07-02 03:02:10');
+
+UNLOCK TABLES;ON DUPLICATE KEY UPDATE username=username; 
