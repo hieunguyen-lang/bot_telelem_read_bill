@@ -242,3 +242,16 @@ def is_cash_related(text, threshold=80):
         if fuzz.partial_ratio(keyword, norm_text) >= threshold:
             return True
     return False
+
+def is_bill_ket_toan_related(text, threshold=80):
+    cash_keywords = [
+        "kết toán", "bill kết toán", "ket toan", "bill kt", "hoa don kt", "bang ke kt",
+        "hóa đơn kết toán", "bill hóa đơn kết toán", "bảng kê kết toán",
+    ]
+
+    norm_text = normalize_text(text)
+
+    for keyword in cash_keywords:
+        if fuzz.partial_ratio(keyword, norm_text) >= threshold:
+            return True
+    return False

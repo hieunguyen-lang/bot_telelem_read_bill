@@ -285,31 +285,33 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         batch_id =str(uuid.uuid4())
         for img_b64 in image_b64_list:
             
-            result = analyzer.analyze_bill_gpt(img_b64)
-            
-            if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
-                print("Cả ten_ngan_hang và so_hoa_don so_lo so_the None")
-                continue
-            if result.get("so_lo") is None and result.get("mid") is None and result.get("tid") is None and result.get("so_the") is None:
-                print("Cả so_lo và mid so_the tid ")
-                continue
-            if result.get("so_lo") is None and result.get("mid") is None:
-                print("Cả so_lo và mid ")
-                continue
-            if result.get("so_lo") is None and result.get("tid") is None:
-                print("Cả so_lo và tid ")
-                continue
-            if result.get("loai_giao_dich") is  None : 
-                print("loai_giao_dich none")
-                continue
-            if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
-                print("Đây là hóa đơn kết toán")
-                continue
-            if result.get("ten_ngan_hang") is None:
-                ten_ngan_hang="MPOS"
+            if helper.is_bill_ket_toan_related(caption.get("note")) ==False:
+                result = analyzer.analyze_bill_gpt(img_b64)    
+                if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
+                    print("Cả ten_ngan_hang và so_hoa_don so_lo so_the None")
+                    continue
+                if result.get("so_lo") is None and result.get("mid") is None and result.get("tid") is None and result.get("so_the") is None:
+                    print("Cả so_lo và mid so_the tid ")
+                    continue
+                if result.get("so_lo") is None and result.get("mid") is None:
+                    print("Cả so_lo và mid ")
+                    continue
+                if result.get("so_lo") is None and result.get("tid") is None:
+                    print("Cả so_lo và tid ")
+                    continue
+                if result.get("loai_giao_dich") is  None : 
+                    print("loai_giao_dich none")
+                    continue
+                if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
+                    print("Đây là hóa đơn kết toán")
+                    continue
+                if result.get("ten_ngan_hang") is None:
+                    ten_ngan_hang="MPOS"
+                else:
+                    ten_ngan_hang = result.get("ten_ngan_hang")
             else:
-                ten_ngan_hang = result.get("ten_ngan_hang")
-            
+                result = analyzer.analyze_bill_kettoan_gpt(img_b64)
+                ten_ngan_hang= result.get("ten_ngan_hang")
             
             row = [
                 timestamp,
@@ -356,6 +358,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "PHÍ DV": tien_phi_int,
             }
             invoice_key = helper.generate_invoice_key_simple(result, ten_ngan_hang)
+            print("vào đây")
             duplicate = redis.is_duplicate(invoice_key)
             #duplicate = False
             if duplicate:
@@ -497,32 +500,33 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         tien_phi_int =helper.parse_currency_input_int(caption['tien_phi'])
         batch_id = str(uuid.uuid4())
         for img_b64 in image_b64_list:
+            if helper.is_bill_ket_toan_related(caption.get("note")) ==False:        
+                result = analyzer.analyze_bill_gpt(img_b64)
                     
-            result = analyzer.analyze_bill_gpt(img_b64)
-                  
-            if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
-                print("Cả ten_ngan_hang và so_hoa_don None")
-                continue
-            if result.get("so_lo") is None and result.get("mid") is None and result.get("tid") is None and result.get("so_the") is None:
-                print("Cả so_lo và mid so_the tid ")
-                continue
-            if result.get("so_lo") is None and result.get("mid") is None:
-                print("Cả so_lo và mid ")
-                continue
-            if result.get("so_lo") is None and result.get("tid") is None:
-                print("Cả so_lo và tid ")
-                continue
-            if result.get("loai_giao_dich") is  None : 
-                print("loai_giao_dich none")
-                continue
-            if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
-                print("Đây là hóa đơn kết toán")
-                continue
-            if result.get("ten_ngan_hang") is None:
-                ten_ngan_hang="MPOS"
+                if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
+                    print("Cả ten_ngan_hang và so_hoa_don None")
+                    continue
+                if result.get("so_lo") is None and result.get("mid") is None and result.get("tid") is None and result.get("so_the") is None:
+                    print("Cả so_lo và mid so_the tid ")
+                    continue
+                if result.get("so_lo") is None and result.get("mid") is None:
+                    print("Cả so_lo và mid ")
+                    continue
+                if result.get("so_lo") is None and result.get("tid") is None:
+                    print("Cả so_lo và tid ")
+                    continue
+                if result.get("loai_giao_dich") is  None : 
+                    print("loai_giao_dich none")
+                    continue
+                if result.get("loai_giao_dich") is not None and result.get("loai_giao_dich") =='Kết Toán': 
+                    print("Đây là hóa đơn kết toán")
+                    continue
+                if result.get("ten_ngan_hang") is None:
+                    ten_ngan_hang="MPOS"
+                else:
+                    ten_ngan_hang = result.get("ten_ngan_hang")
             else:
-                ten_ngan_hang = result.get("ten_ngan_hang")
-            
+                result = analyzer.analyze_bill_kettoan_gpt(img_b64)
             
             row = [
                 timestamp,
