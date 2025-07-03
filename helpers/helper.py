@@ -5,6 +5,23 @@ import base64
 from rapidfuzz import fuzz
 import re
 import unicodedata
+DISPLAY_KEYS = {
+    "khach": "Khach",
+    "sdt": "Sdt",
+    "rut": "Rut",
+    "dao": "Dao",
+    "phi": "Phi",
+    "tien_phi": "TienPhi",
+    "tong": "Tong",
+    "lich_canh_bao": "LichCanhBao",
+    "ck_vao": "ck_vao",
+    "ck_ra": "ck_ra",
+    "stk": "Stk",
+    "note": "Note"
+}
+def format_missing_keys(missing):
+    return [DISPLAY_KEYS.get(k, k) for k in missing]
+
 def process_telegram_photo_to_base64(message_photo, max_width=800, quality=70) -> str:
     file = message_photo.get_file()
     bio = BytesIO()

@@ -48,6 +48,7 @@ db = MySQLConnector(
 )
 media_group_storage = {}
 redis=RedisDuplicateChecker()
+
 def validate_caption(update, chat_id, caption):
     if not caption:
         return None, "❌ Không tìm thấy nội dung để xử lý. Vui lòng thêm caption cho ảnh."
@@ -69,17 +70,22 @@ def validate_caption(update, chat_id, caption):
     def send_format_guide(missing=None):
         message = "❌ Vui lòng sửa lại caption theo đúng định dạng yêu cầu.\n"
         if missing:
-            message += f"⚠️ Thiếu các trường sau: `{', '.join(missing)}`\n\n"
+            display_missing = helper.format_missing_keys(missing)
+            message += f"⚠️ Thiếu các trường sau: `{', '.join(display_missing)}`\n\n"
+
         message += (
-            "📌 Ví dụ:\n"
-            "`Khach: {Đặng Huỳnh Duyệt}`\n"
-            "`Sdt: {0969963324}`\n"
-            f"`{'Dao' if str(chat_id) == GROUP_DAO_ID else 'Rut'}: {{19M990}}`\n"
+            "📌 Ví dụ định dạng đúng:\n"
+            "`Khach: {Nguyễn Văn A}`\n"
+            "`Sdt: {0912345678}`\n"
+            "`Rut: {40.000M}` hoặc `Dao: {32.400M}`\n"
             "`Phi: {2%}`\n"
-            "`TienPhi: {400K}`\n"
-            "`Tong: {19M590}`\n"
-            "`LichCanhBao: {21}`\n"
-            "`Note: {Chuyển khoản hộ em với}`"
+            "`TienPhi: {800.000}`\n"
+            "`Tong: {40.800M}`\n"
+            "`LichCanhBao: {15}`\n"
+            "`ck_vao: {3.058M}`\n"
+            "`ck_ra: {0}`\n"
+            "`Stk: VPBANK - 0123456789 - Nguyễn Văn A`\n"
+            "`Note: {Khách chuyển khoản hộ em}`"
         )
         update.message.reply_text(message, parse_mode="Markdown")
 
@@ -88,8 +94,10 @@ def validate_caption(update, chat_id, caption):
 
     # Check theo nhóm
     if str(chat_id) == GROUP_DAO_ID:
-        required_keys = ['khach', 'sdt', 'dao', 'phi', 'tienphi', 'tong', 'lichcanhbao']
-        present_keys = extract_keys(caption)
+        required_keys = ["khach", "sdt", "dao", "phi", "tien_phi", "tong", "lich_canh_bao", "ck_vao", "ck_ra", "stk", "note"]
+    
+        present_dict = helper.parse_message_dao(caption)
+        present_keys =list(present_dict.keys())
         missing_keys = [key for key in required_keys if key not in present_keys]
 
         if missing_keys:
@@ -103,11 +111,13 @@ def validate_caption(update, chat_id, caption):
         return parsed, None
 
     elif str(chat_id) == GROUP_RUT_ID:
-        required_keys = ['khach', 'sdt', 'rut', 'phi', 'tienphi', 'tong', 'lichcanhbao']
-        present_keys = extract_keys(caption)
+        required_keys = ["khach", "sdt", "rut", "phi", "tien_phi", "tong", "lich_canh_bao", "ck_vao", "ck_ra", "stk", "note"]
+
+        present_dict = helper.parse_message_rut(caption)
+        present_keys =list(present_dict.keys())
         missing_keys = [key for key in required_keys if key not in present_keys]
 
-        if missing_keys:
+        if missing_keys:    
             send_format_guide(missing_keys)
             return None, "❌ Thiếu key: " + ", ".join(missing_keys)
 
