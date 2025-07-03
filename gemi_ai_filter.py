@@ -25,16 +25,30 @@ class GPTBill_Analyzer:
             response = self.client.responses.create(
                 prompt={
                     "id": "pmpt_685c2e52caec8193a3e40f10de2c44430976694b2bec9c34",
-                    "version": "10"
+                    "version": "12"
                 },
                 input=[
-                    
+                    # {
+                    # "role": "user",
+                    # "content": [
+                    #     {
+                    #     "type": "text",
+                    #     "text": "Đây là ảnh hóa đơn điện tử, có thể dễ nhầm với ảnh banking. Nhưng đây là hóa đơn POS thanh toán, cần trích xuất."
+                    #     },
+                    #     {
+                    #     "type": "image_url",
+                    #     "image_url": {
+                    #         "url": "data:image/png;base64,..."
+                    #     }
+                    #     }
+                    # ]
+                    # },
                     {
                     "role": "user",
                     "content": [
                         {
                         "type": "input_text",
-                        "text": "hãy trích xuất thông tin ảnh sau\n"
+                        "text": "Ảnh dưới đây là hóa đơn POS, hãy trích xuất các trường đã định nghĩa trong prompt.\n"
                         },
                         {
                         "type": "input_image",

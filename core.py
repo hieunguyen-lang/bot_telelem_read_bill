@@ -254,9 +254,9 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
     timestamp = message.date.strftime("%Y-%m-%d %H:%M:%S")
     image_b64_list = context.user_data.get("image_data", [])
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
-    print(f"Đang xử lý ảnh từ {full_name} ({message.from_user.id}) - {timestamp}")
     print(f"Caption: {caption}")
-
+    ck_vao_int = helper.parse_currency_input_int(caption.get("ck_vao"))
+    ck_ra_int = helper.parse_currency_input_int(caption.get("ck_ra"))
     try:
         if not image_b64_list:
             message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
@@ -317,14 +317,16 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("so_lo"),
                 result.get("so_hoa_don"),    
                 result.get("ten_may_pos"),
-                caption['lich_canh_bao'],
+                caption.get('lich_canh_bao'),
                 str(tien_phi_int),
                 batch_id,
-                caption['note'],
-                caption["stk"],
-                helper.contains_khach_moi(caption['note']),
-                0,
-                str(helper.parse_percent(caption['phi']))
+                caption.get('note'),
+                helper.contains_khach_moi(caption.get('note', '')),
+                str(ck_ra_int),
+                str(ck_vao_int),
+                None,  # stk_cty
+                None,  # stk_khach
+                str(helper.parse_percent(caption.get('phi', '')))
             ]
         
             data = {
@@ -399,14 +401,30 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         else:
             for row in list_row_insert_db:
                 # Giả sử cột 'tien_phi' nằm ở index 16
-                row[16] = tien_phi_int      
-        ck_khach  = helper.extract_amount_after_fee(caption['note'])
+                row[16] = tien_phi_int  
+        is_tienmat  = helper.is_cash_related(caption['note'])    
+        # Gán stk_khach và stk_cty mặc định
+        stk_khach = None
+        stk_cty = None
+        print("-----------------Gán stk--------------")
+        if ck_ra_int == 0 and ck_vao_int !=0:
+            stk_khach = ''
+            stk_cty = caption.get("stk")
+        elif ck_ra_int != 0 and ck_vao_int ==0:
+            stk_khach = caption.get("stk")
+            stk_cty = ''
+        elif is_tienmat:
+            stk_khach = ''
+            stk_cty = "Tiền mặt"
+        print("ck_vao_int: ",ck_vao_int)
+        print("ck_ra_int: ",ck_ra_int)
+        print("stk_khach: ",stk_khach)
+        print("stk_cty: ",stk_cty)
         for row in list_row_insert_db:
-                
-                if ck_khach:
-                    row[21] = helper.parse_currency_input_int(ck_khach) 
-                else:
-                    row[21] = int(sum - int(tien_phi_int))
+            if stk_khach is not None:
+                row[22] = stk_khach  # vị trí stk_khach
+            if stk_cty is not None:
+                row[23] = stk_cty    # vị trí stk_cty
         for item in list_data:
             item["KẾT TOÁN"] = sum
             
@@ -449,6 +467,8 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
     image_b64_list = context.user_data.get("image_data", [])
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
     print(caption)
+    ck_vao_int = helper.parse_currency_input_int(caption.get("ck_vao"))
+    ck_ra_int = helper.parse_currency_input_int(caption.get("ck_ra"))
     try:
         if not image_b64_list:
             message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
@@ -497,8 +517,8 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             row = [
                 timestamp,
                 full_name,
-                caption['khach'],
-                caption['sdt'],
+                caption.get('khach'),
+                caption.get('sdt'),
                 "RUT",
                 ten_ngan_hang,
                 result.get("ngay_giao_dich"),
@@ -508,16 +528,18 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("tid"),
                 result.get("mid"),
                 result.get("so_lo"),
-                result.get("so_hoa_don"),    
+                result.get("so_hoa_don"),
                 result.get("ten_may_pos"),
-                caption['lich_canh_bao'],
+                caption.get('lich_canh_bao'),
                 str(tien_phi_int),
                 batch_id,
-                caption['note'],
-                caption["stk"],
-                helper.contains_khach_moi(caption['note']),
-                0,
-                str(helper.parse_percent(caption['phi']))
+                caption.get('note'),
+                helper.contains_khach_moi(caption.get('note', '')),
+                str(ck_ra_int),
+                str(ck_vao_int),
+                None,  # stk_cty
+                None,  # stk_khach
+                str(helper.parse_percent(caption.get('phi', '')))
             ]
               # Ghi vào MySQL
             
@@ -600,13 +622,30 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             for row in list_row_insert_db:
                 # Giả sử cột 'tien_phi' nằm ở index 16
                 row[16] = tien_phi_int 
-        ck_khach  = helper.extract_amount_after_fee(caption['note'])
+        is_tienmat  = helper.is_cash_related(caption['note'])
+        # Gán stk_khach và stk_cty mặc định
+        stk_khach = None
+        stk_cty = None
+        print("-----------------Gán stk--------------")
+        if ck_ra_int == 0 and ck_vao_int !=0:
+            stk_khach = ''
+            stk_cty = caption.get("stk")
+        elif ck_ra_int != 0 and ck_vao_int ==0:
+            stk_khach = caption.get("stk")
+            stk_cty = ''
+        elif is_tienmat:
+            stk_khach = ''
+            stk_cty = "Tiền mặt"
+        print("ck_vao_int: ",ck_vao_int)
+        print("ck_ra_int: ",ck_ra_int)
+        print("stk_khach: ",stk_khach)
+        print("stk_cty: ",stk_cty)
         for row in list_row_insert_db:
+            if stk_khach is not None:
+                row[22] = stk_khach  # vị trí stk_khach
+            if stk_cty is not None:
+                row[23] = stk_cty    # vị trí stk_cty
                 
-                if ck_khach:
-                    row[21] = helper.parse_currency_input_int(ck_khach) 
-                else:
-                    row[21] = int(sum - int(tien_phi_int))
         for item in list_data:
             item["KẾT TOÁN"] = sum
 
@@ -665,11 +704,13 @@ def insert_bill_rows(db, list_rows):
             tien_phi,
             batch_id,
             caption_goc,
-            stk_khach,
             khach_moi,
-            ck_khach_rut,
+            ck_ra,
+            ck_vao,
+            stk_khach,
+            stk_cty,
             phan_tram_phi
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s,%s,%s,%s,%s,%s,%s ,%s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     db.executemany(query, list_rows)
 

@@ -114,15 +114,17 @@ def parse_message_rut(text):
         return None
 
     patterns = {
-        "khach": r"Khach:\s*\{(.+?)\}",
-        "sdt": r"Sdt:\s*\{(\d{9,11})\}",
-        "rut": r"Rut:\s*\{(.+?)\}",
-        "phi": r"Phi:\s*\{(.+?)\}",
-        "tien_phi": r"(?:TienPhi|DienPhi):\s*\{(.+?)\}",
-        "chuyen_khoan": r"ChuyenKhoan:\s*\{(.+?)\}",
-        "lich_canh_bao": r"LichCanhBao:\s*\{(\d+)\}",
-        "stk": r"STK:\s*(?:\{)?(.+?)(?:\})?(?:\n|$)",
-        "note": r"Note:\s*\{(.+?)\}"
+        "khach": r"Khach\s*[:\-]\s*\{(.+?)\}",
+        "sdt": r"Sdt\s*[:\-]\s*\{?(\d{9,11})\}?",
+        "rut": r"Rut\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+        "phi": r"Phi\s*[:\-]\s*\{(.+?)\}",
+        "tien_phi": r"TienPhi\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+        "tong": r"Tong\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+        "lich_canh_bao": r"LichCanhBao\s*[:\-]\s*\{(\d+)\}",
+        "ck_vao": r"ck[_\s]?vao\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+        "ck_ra": r"ck[_\s]?ra\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+        "stk": r"Stk\s*[:\-]\s*(?:\{)?([^\n\}]+)(?:\})?",
+        "note": r"Note\s*[:\-]\s*\{(.+?)\}"
     }
 
     for key, pattern in patterns.items():
@@ -145,16 +147,17 @@ def parse_message_dao(text):
 
     # Các pattern tương ứng với định dạng: Trường: {giá trị}
     patterns = {
-        "khach": r"Khach:\s*\{(.+?)\}",
-        "sdt": r"Sdt:\s*\{(\d{9,11})\}",
-        "dao": r"Dao:\s*\{([\d.,a-zA-Z ]+)\}",
-        "phi": r"Phi:\s*\{(.+?)\}",
-        "tien_phi": r"TienPhi:\s*\{([\d.,a-zA-Z ]+)\}",
-        "rut_thieu": r"RutThieu:\s*\{([\d.,a-zA-Z ]+)\}",
-        "tong": r"Tong:\s*\{([\d.,a-zA-Z ]+)\}",
-        "lich_canh_bao": r"LichCanhBao:\s*\{(\d+)\}",
-        "stk": r"Stk:\s*(.+)",
-        "note": r"Note:\s*\{(.+?)\}"
+        "khach": r"Khach\s*[:\-]\s*\{(.+?)\}",
+        "sdt": r"Sdt\s*[:\-]\s*\{?(\d{9,11})\}?",
+        "dao": r"Dao\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+        "phi": r"Phi\s*[:\-]\s*\{(.+?)\}",
+        "tien_phi": r"TienPhi\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+        "tong": r"Tong\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+        "lich_canh_bao": r"LichCanhBao\s*[:\-]\s*\{(\d+)\}",
+        "ck_vao": r"ck[_\s]?vao\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+        "ck_ra": r"ck[_\s]?ra\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+        "stk": r"Stk\s*[:\-]\s*(?:\{)?([^\n\}]+)(?:\})?",
+        "note": r"Note\s*[:\-]\s*\{(.+?)\}"
     }
 
     for key, pattern in patterns.items():
@@ -201,3 +204,24 @@ def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
         ten_ngan_hang
     ])
     return key
+
+
+def normalize_text(text):
+    # Chuyển về lowercase, loại bỏ dấu tiếng Việt
+    text = text.lower()
+    text = unicodedata.normalize("NFD", text)
+    text = ''.join(c for c in text if unicodedata.category(c) != 'Mn')  # Loại bỏ dấu
+    return text
+
+def is_cash_related(text, threshold=80):
+    cash_keywords = [
+        "tien mat", "tm", "khach dua", "dua tien", "tien khach dua",
+        "thanh toan tien mat", "dua bang tien mat", "giao tien mat"
+    ]
+
+    norm_text = normalize_text(text)
+
+    for keyword in cash_keywords:
+        if fuzz.partial_ratio(keyword, norm_text) >= threshold:
+            return True
+    return False
