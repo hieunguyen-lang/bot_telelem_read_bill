@@ -76,32 +76,40 @@ def handle_text_search(update, context):
         results = search_hoa_don_rut(db, "ten_khach", keyword)
         if not results:
             update.message.reply_text(f"❌ Không tìm thấy kết quả cho: *{keyword}*", parse_mode="Markdown")
+            context.user_data.pop("search_mode", None)  # Xóa trạng thái search_mode
             return
         text = format_results(results)
         update.message.reply_text(f"📋 Kết quả:\n{text}", parse_mode="Markdown")
+        context.user_data.pop("search_mode", None)  # Xóa trạng thái search_mode
         # TODO: Truy vấn database, trả kết quả thật
 
     elif search_mode == "sdt":
         results = search_hoa_don_rut(db, "so_dien_thoai", keyword)
         if not results:
             update.message.reply_text(f"❌ Không tìm thấy kết quả cho: *{keyword}*", parse_mode="Markdown")
+            context.user_data.pop("search_mode", None)  # Xóa trạng thái search_mode
             return
         text = format_results(results)
         update.message.reply_text(f"📋 Kết quả:\n{text}", parse_mode="Markdown")
+        context.user_data.pop("search_mode", None)  # Xóa trạng thái search_mode
     elif search_mode == "so_lo":
         results = search_hoa_don_rut(db, "so_lo", keyword)
         if not results:
             update.message.reply_text(f"❌ Không tìm thấy kết quả cho: *{keyword}*", parse_mode="Markdown")
+            context.user_data.pop("search_mode", None)  # Xóa trạng thái search_mode
             return
         text = format_results(results)
         update.message.reply_text(f"📋 Kết quả:\n{text}", parse_mode="Markdown")
+        context.user_data.pop("search_mode", None)  # Xóa trạng thái search_mode
     elif search_mode == "so_hoa_don":
         results = search_hoa_don_rut(db, "so_hoa_don", keyword)
         if not results:
             update.message.reply_text(f"❌ Không tìm thấy kết quả cho: *{keyword}*", parse_mode="Markdown")
+            context.user_data.pop("search_mode", None)  # Xóa trạng thái search_mode
             return
         text = format_results(results)
         update.message.reply_text(f"📋 Kết quả:\n{text}", parse_mode="Markdown")
+        context.user_data.pop("search_mode", None)  # Xóa trạng thái search_mode
     elif search_mode == "user_commitsion":
         username = keyword  # Người dùng gõ username
         
@@ -125,6 +133,7 @@ def handle_text_search(update, context):
             reply_lines.append(f"  ↳ Nhận 0.02%: `{hoahong_002:,.0f}` đ")
 
         update.message.reply_text("\n".join(reply_lines), parse_mode="Markdown")
+        context.user_data.pop("search_mode", None)  # Xóa trạng thái search_mode
 # Truy vấn DB
 def search_hoa_hong_theo_thoi_gian(db, nguoi_gui, from_date, to_date):
     """
