@@ -310,7 +310,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 else:
                     ten_ngan_hang = result.get("ten_ngan_hang")
             else:
-                result = analyzer.analyze_bill_version_new_gpt(img_b64)
+                result = analyzer.analyze_bill_kettoan_gpt(img_b64)
                 ten_ngan_hang= result.get("ten_ngan_hang")
             
             row = [
