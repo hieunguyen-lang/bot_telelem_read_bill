@@ -13,9 +13,9 @@ from telegram.ext import CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 import base64
 from gemi_ai import GeminiBillAnalyzer
-from mysql_db_connector import MySQLConnector
-from redis_connect import RedisDuplicateChecker
-from gemi_ai_filter import GPTBill_Analyzer
+from data_connect.mysql_db_connector import MySQLConnector
+from data_connect.redis_connect import RedisDuplicateChecker
+from ai_core.gpt_ai_filter import GPTBill_Analyzer
 from rapidfuzz import fuzz
 import unicodedata
 from dotenv import load_dotenv

@@ -54,8 +54,6 @@ def convert_image_to_base64_file(
     if output_path is None:
         output_path = os.path.splitext(image_path)[0] + ".base64.txt"
 
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(encoded_with_prefix)
 
     return encoded_with_prefix
 class GPTBill_Analyzer:
@@ -189,9 +187,9 @@ class GPTBill_Analyzer:
             print("Chuỗi ảnh không hợp lệ.")
             return None
         data_url = f"data:image/jpeg;base64,{base64_string}"
-        data_url_thanhtoan= convert_image_to_base64_file("thanhtoan2.jpeg",max_width=400)
-        data_url_kettoan = convert_image_to_base64_file("bill_ketoan.jpeg",max_width=400)
-        data_url_MPOS = convert_image_to_base64_file("MPOS.jpg",max_width=400)
+        data_url_thanhtoan= convert_image_to_base64_file("data_mau\\bill_ketoan.jpeg",max_width=400)
+        data_url_kettoan = convert_image_to_base64_file("data_mau\\bill_ketoan.jpeg",max_width=400)
+        data_url_MPOS = convert_image_to_base64_file("data_mau\\MPOS.jpg",max_width=400)
         try:
             response = self.client.responses.create(
                 prompt={
@@ -238,6 +236,49 @@ class GPTBill_Analyzer:
                         }
                     ]
                     },
+                    {
+                    "role": "user",
+                    "content": [
+                        {
+                        "type": "input_text",
+                        "text": "Ảnh dưới đây là hóa đơn POS, hãy trích xuất các trường đã định nghĩa trong prompt.\n"
+                        },
+                        {
+                        "type": "input_image",
+                        "image_url": data_url
+                        }
+                    ]
+                    }
+                ],
+                reasoning={},
+                max_output_tokens=2048,
+                store=True
+            )
+        
+        # Lấy chuỗi JSON đã được "escape" từ GPT
+            escaped_json_str = response.output[0].content[0].text
+
+            # Parse thành dict
+            bill_data = json.loads(escaped_json_str)
+            print(bill_data)
+            return bill_data
+        except Exception as e:
+            print(e)
+            return None    
+
+    def analyze_bill_momo_gpt(self, base64_string):
+        print("---------------Gửi Bill TỚI GPT API--------------")
+        if not base64_string:
+            print("Chuỗi ảnh không hợp lệ.")
+            return None
+        data_url = f"data:image/jpeg;base64,{base64_string}"
+        try:
+            response = self.client.responses.create(
+                prompt={
+                    "id": "pmpt_6869420a07c4819783a82e1891ff640c002402362b41461c",
+                    "version": "1"
+                },
+                input=[
                     {
                     "role": "user",
                     "content": [

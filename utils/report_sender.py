@@ -1,7 +1,7 @@
 from telegram import Bot
 from datetime import datetime,timedelta
 import os
-from mysql_db_connector import MySQLConnector
+from data_connect.mysql_db_connector import MySQLConnector
 import pytz
 db = MySQLConnector(
     host=os.getenv("MYSQL_HOST"),

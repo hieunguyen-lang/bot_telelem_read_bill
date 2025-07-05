@@ -1,5 +1,5 @@
 from telegram.ext import MessageHandler, Filters,CommandHandler
-from core.core import handle_photo
+from core.momo_core import handle_photo
 
-def register_photo_handler(dp):
+def register_momo_handler(dp):
     dp.add_handler(MessageHandler(Filters.photo, handle_photo))

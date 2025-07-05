@@ -1,6 +1,6 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CommandHandler, CallbackQueryHandler, MessageHandler, Filters
-from mysql_db_connector import MySQLConnector
+from data_connect.mysql_db_connector import MySQLConnector
 import os
 from datetime import datetime, timedelta
 

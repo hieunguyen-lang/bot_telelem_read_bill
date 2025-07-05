@@ -37,6 +37,23 @@ CREATE TABLE IF NOT EXISTS thong_tin_hoa_don (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS hoa_don_dien (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    nha_cung_cap VARCHAR(255),
+    ten_khach_hang VARCHAR(255),
+    ma_khach_hang VARCHAR(50),
+    dia_chi VARCHAR(500),
+    ky_thanh_toan VARCHAR(100),
+    so_tien BIGINT,
+    ma_giao_dich VARCHAR(100) UNIQUE,
+    thoi_gian DATETIME,
+    tai_khoan_the VARCHAR(100),
+    tong_phi VARCHAR(100),
+    trang_thai VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    batch_id VARCHAR(250),
+);
+
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,

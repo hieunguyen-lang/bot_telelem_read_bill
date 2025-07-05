@@ -2,6 +2,7 @@ from telegram.ext import Updater
 from handlers.photo_handler import register_photo_handler
 from handlers.menu_handler import register_menu_handlers 
 from handlers.cal_comission import register_hoahong_handlers
+from handlers.momo_handler import register_momo_handler
 import os
 from utils.report_sender import send_daily_report
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -32,5 +33,6 @@ dp = updater.dispatcher
 register_photo_handler(dp)
 register_menu_handlers(dp)
 register_hoahong_handlers(dp)
+register_momo_handler(dp)
 updater.start_polling()
 updater.idle()
