@@ -28,4 +28,7 @@ def handle_by_group(update, context):
     elif str(chat_id)  in [ str(GROUP_MOMO_ID)]:
         handle_photo_momo(update, context)
     else:
-        update.message.reply_text("❌ Group này không được phép xử lý.")
+        chat_id = update.effective_chat.id
+        
+        print(f"Ảnh gửi từ group  (ID: {chat_id})")
+        update.message.reply_text("❌ Group này không được phép xử lý:", chat_id)
