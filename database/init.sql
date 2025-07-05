@@ -55,9 +55,13 @@ CREATE TABLE IF NOT EXISTS hoa_don_dien
     created_at     timestamp default CURRENT_TIMESTAMP null,
     batch_id       varchar(250)                        null,
     update_at      datetime                            null,
+    updated_at     datetime                            null,
+    nguoi_gui      varchar(255)                        null,
+    ten_zalo       varchar(50)                         not null,
     constraint ma_giao_dich
         unique (ma_giao_dich)
 );
+
 
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (

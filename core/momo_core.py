@@ -172,6 +172,7 @@ def handle_momo_bill(update, context):
     timestamp = message.date.strftime("%Y-%m-%d %H:%M:%S")
     image_b64_list = context.user_data.get("image_data", [])
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
+    print(caption)
     try:
         if not image_b64_list:
             message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
@@ -202,7 +203,9 @@ def handle_momo_bill(update, context):
                 result.get("tai_khoan_the"),
                 result.get("tong_phi"),
                 result.get("trang_thai"),
-                batch_id
+                batch_id,
+                full_name,
+                caption.get("khach")
             ]
         
             duplicate = redis.is_duplicate_momo(result.get("ma_giao_dich"))
@@ -281,9 +284,11 @@ def insert_bill_rows(db, list_rows):
             tai_khoan_the,
             tong_phi,
             trang_thai,
-            batch_id
+            batch_id,
+            nguoi_gui,
+            ten_zalo
         ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
     """
 
