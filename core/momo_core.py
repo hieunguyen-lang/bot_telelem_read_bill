@@ -74,10 +74,10 @@ def validate_caption(update, chat_id, caption):
     caption = normalize_caption(caption)
 
     # Check theo nhóm
-    if str(chat_id) == GROUP_DAO_ID:
-        required_keys = ["khach", "sdt", "dao", "phi", "tien_phi", "tong", "lich_canh_bao", "ck_vao", "ck_ra", "stk", "note"]
+    if str(chat_id) == GROUP_MOMO_ID:
+        required_keys = ["khach", "phi", "ck_ra", "stk", "note"]
     
-        present_dict = helper.parse_message_dao(caption)
+        present_dict = helper.parse_message_momo(caption)
         present_keys =list(present_dict.keys())
         missing_keys = [key for key in required_keys if key not in present_keys]
 
@@ -85,23 +85,21 @@ def validate_caption(update, chat_id, caption):
             send_format_guide(missing_keys)
             return None, "❌ Thiếu key: " + ", ".join(missing_keys)
 
-        parsed = helper.parse_message_dao(caption)
-        if 'dao' not in parsed:
-            update.message.reply_text("❌ Lỗi: Không tìm thấy trường 'Dao' sau khi parse.")
-            return None, "❌ parse_message_dao thiếu key 'dao'"
+        parsed = helper.parse_message_momo(caption)
+    
         return parsed, None
 
 
     return {}, None
 
-def handle_photo(update, context):
+def handle_photo_momo(update, context):
     chat_id = update.effective_chat.id
     chat_title = update.effective_chat.title
     print(f"Ảnh gửi từ group {chat_title} (ID: {chat_id})")
-    
-    if str(chat_id) not in [str(GROUP_MOMO_ID)]:
-        print(f"⛔ Tin nhắn từ group lạ (ID: {chat_id}) → Bỏ qua")
-        return
+    print()
+    # if str(chat_id) not in [str(GROUP_MOMO_ID)]:
+    #     print(f"⛔ Tin nhắn từ group lạ (ID: {chat_id}) → Bỏ qua")
+    #     return
     message = update.message
     media_group_id = message.media_group_id or f"single_{message.message_id}"
     if message.media_group_id is None or media_group_id not in media_group_storage:
@@ -200,7 +198,7 @@ def handle_momo_bill(update, context):
                 result.get("ky_thanh_toan"),
                 result.get("so_tien"),
                 result.get("ma_giao_dich"),
-                result.get("thoi_gian"),
+                helper.fix_datetime(result.get("thoi_gian")),
                 result.get("tai_khoan_the"),
                 result.get("tong_phi"),
                 result.get("trang_thai"),
@@ -212,33 +210,37 @@ def handle_momo_bill(update, context):
             if duplicate:
                 print("[DUPLICATE KEY]"+str(result.get("ma_giao_dich")))
                 message.reply_text(
-                    f"🚫 Hóa đơn đã được gửi trước đó:\n"
-                    f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
-                    f"• Key: `{result.get("ma_giao_dich")}`\n"
-                    f"• Tên Khách: `{result.get("ten_khach_hang")}`\n"
-                    f"• Số tiền: `{result.get('so_tien')}`\n"
-                    f"• Ngày giao dịch : `{result.get('thoi_gian')}`\n",
+                    (
+                        "🚫 Hóa đơn đã được gửi trước đó:\n"
+                        "Vui lòng không gửi hóa đơn bên ở dưới!\n"
+                        f"• Key: `{result.get('ma_giao_dich')}`\n"
+                        f"• Tên Khách: `{result.get('ten_khach_hang')}`\n"
+                        f"• Số tiền: `{result.get('so_tien')}`\n"
+                        f"• Ngày giao dịch: `{result.get('thoi_gian')}`"
+                    ),
                     parse_mode="Markdown"
                 )
+
                 return
             list_invoice_key.append(result.get("ma_giao_dich"))
             list_row_insert_db.append(row)
             sum += int(result.get("so_tien") or 0)
             # Lưu lại kết quả để in ra cuối
             res_mess.append(
-                f"👤 {result.get("ten_khach_hang")} - "
+                f"👤 {result.get('ten_khach_hang')} - "
                 f"💰 {helper.format_currency_vn(result.get('so_tien')) or '?'} - "
-                f"📄 {result.get("ma_giao_dich") or ''} - "
+                f"📄 {result.get('ma_giao_dich') or ''} - "
                 f"🧾 {result.get('thoi_gian') or ''} - "
             )
         percent = helper.parse_percent(caption['phi'])   
         ck_ra_cal = sum -  percent*sum
-        if ck_ra_cal == caption.get("ck_ra"):
-
-            try:
-                insert_bill_rows(db,list_row_insert_db)
-            except Exception as e:
-                message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
+        ck_ra_caption_int =helper.parse_currency_input_int(caption['ck_ra'])
+        print(ck_ra_caption_int)
+        print(int(ck_ra_cal))
+        if int(ck_ra_cal) == ck_ra_caption_int:
+            is_insert = insert_bill_rows(db,list_row_insert_db)
+            if is_insert == None:
+                message.reply_text("⚠️ Có lỗi xảy ra trong quá trình lưu vào db: ")
                 return
             for item in list_invoice_key:
                 redis.mark_processed_momo(item)
@@ -251,7 +253,7 @@ def handle_momo_bill(update, context):
             message.reply_text(reply_msg)
         else:
             message.reply_text(
-                    "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
+                    "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n"
                     f"👉 Tổng rút: {sum:,}đ\n"
                     f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
                     f"👉 ck_ra đúng phải là: {int(ck_ra_cal):,}đ\n\n"
@@ -267,6 +269,7 @@ def insert_bill_rows(db, list_rows):
     print("Insert DB")
     query = """
         INSERT INTO hoa_don_dien (
+            update_at,
             nha_cung_cap,
             ten_khach_hang,
             ma_khach_hang,
@@ -280,11 +283,13 @@ def insert_bill_rows(db, list_rows):
             trang_thai,
             batch_id
         ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
     """
 
-    db.executemany(query, list_rows)
+    result =db.executemany(query, list_rows)
+    return  result
+    
 
 
 

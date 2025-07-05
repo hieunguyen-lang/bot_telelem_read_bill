@@ -26,6 +26,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # ID của các group
 GROUP_DAO_ID = os.getenv("GROUP_DAO_ID")  # ID của group DAO
 GROUP_RUT_ID = os.getenv("GROUP_RUT_ID")  # ID của group Rút tiền
+GROUP_MOMO_ID = os.getenv("GROUP_MOMO_ID") 
 # ID của các Google Sheet
 SHEET_DAO_ID = os.getenv("SHEET_DAO_ID")  # ID của Google Sheet cho group DAO
 SHEET_RUT_ID = os.getenv("SHEET_RUT_ID")  # ID của Google Sheet cho group Rút tiền
@@ -138,7 +139,8 @@ def handle_photo(update, context):
     # print(chat_id, type(chat_id))
     # print(GROUP_DAO_ID, type(GROUP_DAO_ID))
     # print(GROUP_RUT_ID, type(GROUP_RUT_ID))
-    if str(chat_id) not in [str(GROUP_DAO_ID), str(GROUP_RUT_ID)]:
+    if str(chat_id) not in [str(GROUP_DAO_ID), str(GROUP_RUT_ID), str(GROUP_MOMO_ID)]:
+        
         print(f"⛔ Tin nhắn từ group lạ (ID: {chat_id}) → Bỏ qua")
         return
     message = update.message
@@ -456,7 +458,9 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         else:
             sheet = spreadsheet.worksheet("MPOS")
         try:
-            insert_bill_rows(db,list_row_insert_db)
+            is_insert =insert_bill_rows(db,list_row_insert_db)
+            if is_insert is None:
+                message.reply_text("⚠️ Có lỗi xảy ra trong quá trình lưu vào db: ")
             append_multiple_by_headers(sheet, list_data)
         except Exception as e:
             message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
@@ -678,7 +682,9 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 sheet = spreadsheet.worksheet("MPOS")
 
         try:
-            insert_bill_rows(db,list_row_insert_db)
+            is_insert =insert_bill_rows(db,list_row_insert_db)
+            if is_insert is None:
+                message.reply_text("⚠️ Có lỗi xảy ra trong quá trình lưu vào db: ")
             append_multiple_by_headers(sheet, list_data)
         except Exception as e:
             message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
@@ -726,7 +732,9 @@ def insert_bill_rows(db, list_rows):
             phan_tram_phi
         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
-    db.executemany(query, list_rows)
+    result = db.executemany(query, list_rows)
+    return result
+    
 
 
 

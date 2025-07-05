@@ -5,6 +5,7 @@ import base64
 from rapidfuzz import fuzz
 import re
 import unicodedata
+from datetime import datetime
 DISPLAY_KEYS = {
     "khach": "Khach",
     "sdt": "Sdt",
@@ -189,7 +190,31 @@ def parse_message_dao(text):
 
     return data
 
+def parse_message_momo(text):
+    data = {}
+    if not text:
+        return None
 
+    # Các pattern tương ứng với định dạng: Trường: {giá trị}
+    patterns = {
+        "khach": r"Khach\s*[:\-]\s*\{(.+?)\}",
+        "phi": r"Phi\s*[:\-]\s*\{(.+?)\}",
+        "ck_ra": r"ck[_\s]?ra\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+        "stk": r"Stk\s*[:\-]\s*(?:\{)?([^\n\}]+)(?:\})?",
+        "note": r"Note\s*[:\-]\s*\{(.+?)\}"
+    }
+
+    for key, pattern in patterns.items():
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            data[key] = match.group(1).strip()
+
+    # Nếu không có note mà dòng cuối là ghi chú thì gán
+    last_line = text.strip().split('\n')[-1]
+    if 'note' not in data and not any(k in last_line.lower() for k in ['khach:', 'stk:', 'chuyenkhoan:', '{']):
+        data['note'] = last_line.strip()
+
+    return data
 def format_currency_vn(value):
     try:
         return f"{int(value):,}".replace(",", ".")
@@ -215,12 +240,11 @@ def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
         safe_get(result, "sdt"),
         safe_get(result, "so_hoa_don"),
         safe_get(result, "so_lo"),
-        safe_get(result, "tid"),
         safe_get(result, "gio_giao_dich"),
         safe_get(result, "tong_so_tien"),
         ten_ngan_hang
     ])
-    
+    print("[KEY]: ",key)
     return key
 
 
@@ -256,3 +280,11 @@ def is_bill_ket_toan_related(text, threshold=80):
         if fuzz.partial_ratio(keyword, norm_text) >= threshold:
             return True
     return False
+
+
+def fix_datetime(value: str) -> str:
+    """
+    Chuyển '10:15 - 04/07/2025' → '2025-07-04 10:15:00'
+    """
+    dt = datetime.strptime(value, "%H:%M - %d/%m/%Y")
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
