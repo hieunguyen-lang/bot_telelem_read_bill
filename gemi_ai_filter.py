@@ -191,7 +191,7 @@ class GPTBill_Analyzer:
         data_url = f"data:image/jpeg;base64,{base64_string}"
         data_url_thanhtoan= convert_image_to_base64_file("thanhtoan2.jpeg",max_width=400)
         data_url_kettoan = convert_image_to_base64_file("bill_ketoan.jpeg",max_width=400)
-        
+        data_url_MPOS = convert_image_to_base64_file("MPOS.jpg",max_width=400)
         try:
             response = self.client.responses.create(
                 prompt={
@@ -218,6 +218,19 @@ class GPTBill_Analyzer:
                         {
                         "type": "input_text",
                         "text": "Hãy học nhận diện 4 loại bill KÉT TOÁN Hoặc TỔNG KẾT của HDBANK MBBANK VPBANK trong ảnh dưới đây.\n"
+                        },
+                        {
+                        "type": "input_image",
+                        "image_url": data_url_kettoan
+                        }
+                    ]
+                    },
+                    {
+                    "role": "user",
+                    "content": [
+                        {
+                        "type": "input_text",
+                        "text": "Đây là bill điện tử đặc biệt nó hiện chữ kết toán nhỏ ở đáy chỉ để thông báo thôi, thông tin bên trong vẫn thuộc dạng bill thanh toán, riêng trường hợp này thì vẫn trích xuất dữ liệu. Lưu ý cẩn thận nhầm với các loại ảnh chụp màn hình và ảnh bill chuyển khoản không liên quan.\n"
                         },
                         {
                         "type": "input_image",
