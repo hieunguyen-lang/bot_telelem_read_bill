@@ -28,4 +28,4 @@ def convert_image_to_base64_file(image_path, output_path=None):
     return base64_data_url
 
 # In ra hoặc dùng để gửi trong API OpenAI
-convert_image_to_base64_file('image.png')
+convert_image_to_base64_file('bill_ketoan.jpeg')

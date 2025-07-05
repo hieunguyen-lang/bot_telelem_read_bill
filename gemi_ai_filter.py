@@ -6,10 +6,58 @@ import json
 import re
 from openai import OpenAI
 from dotenv import load_dotenv
-
+import io
+import mimetypes
 load_dotenv()
 
+def convert_image_to_base64_file(
+    image_path,
+    output_path=None,
+    max_width=300,
+    quality=50,
+    grayscale=True
+) -> str:
+    """
+    Chuyển ảnh sang chuỗi base64 kèm tiền tố data:image/jpeg;base64,... và ghi ra file nếu muốn.
 
+    :param image_path: Đường dẫn ảnh.
+    :param output_path: File output (.txt). Nếu không có sẽ tự tạo.
+    :param max_width: Resize chiều rộng tối đa (giữ tỉ lệ).
+    :param quality: JPEG quality (mặc định 70).
+    :param grayscale: Nếu True, chuyển ảnh sang grayscale.
+    :return: Chuỗi base64 kèm tiền tố.
+    """
+    mime_type, _ = mimetypes.guess_type(image_path)
+    if mime_type is None:
+        mime_type = "image/jpeg"
+
+    with Image.open(image_path) as img:
+        # Chuyển grayscale nếu cần
+        if grayscale and img.mode != "L":
+            img = img.convert("L")
+
+        # Resize giữ tỉ lệ nếu cần
+        if img.width > max_width:
+            ratio = max_width / float(img.width)
+            new_height = int(img.height * ratio)
+            img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+
+        # Encode JPEG + quality
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG", quality=quality)
+        encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+    # Luôn kèm tiền tố
+    encoded_with_prefix = f"data:{mime_type};base64,{encoded}"
+
+    # Ghi ra file nếu có
+    if output_path is None:
+        output_path = os.path.splitext(image_path)[0] + ".base64.txt"
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(encoded_with_prefix)
+
+    return encoded_with_prefix
 class GPTBill_Analyzer:
     def __init__(self):
         # Lấy thông tin xác thực mặc định từ môi trường (ADC - Application Default Credentials)
@@ -115,6 +163,78 @@ class GPTBill_Analyzer:
                         {
                         "type": "output_text",
                         "text": "{\n  \"ten_ngan_hang\": null,\n  \"ten_may_pos\": null,\n  \"loai_giao_dich\": null,\n  \"ngay_giao_dich\": null,\n  \"gio_giao_dich\": null,\n  \"tong_so_tien\": null,\n  \"so_the\": null,\n  \"tid\": null,\n  \"mid\": null,\n  \"so_lo\": null,\n  \"so_hoa_don\": null,\n  \"so_tham_chieu\": null\n}"
+                        }
+                    ]
+                    }
+                ],
+                reasoning={},
+                max_output_tokens=2048,
+                store=True
+            )
+        
+        # Lấy chuỗi JSON đã được "escape" từ GPT
+            escaped_json_str = response.output[0].content[0].text
+
+            # Parse thành dict
+            bill_data = json.loads(escaped_json_str)
+            print(bill_data)
+            return bill_data
+        except Exception as e:
+            print(e)
+            return None    
+
+    def analyze_bill_version_new_gpt(self, base64_string):
+        print("---------------GỬI ẢNH TỚI GPT API--------------")
+        if not base64_string:
+            print("Chuỗi ảnh không hợp lệ.")
+            return None
+        data_url = f"data:image/jpeg;base64,{base64_string}"
+        data_url_thanhtoan= convert_image_to_base64_file("thanhtoan2.jpeg",max_width=400)
+        data_url_kettoan = convert_image_to_base64_file("bill_ketoan.jpeg",max_width=400)
+        
+        try:
+            response = self.client.responses.create(
+                prompt={
+                    "id": "pmpt_6868c0ad9ab48193985b80f148ee8a9d07a6fb4e13464ade",
+                    "version": "6"
+                },
+                input=[
+                    {
+                    "role": "user",
+                    "content": [
+                        {
+                        "type": "input_text",
+                        "text": "Hãy học nhận diện 4 loại bill THANH TOÁN HDBANK MBBANK MPOS trong ảnh dưới đây.\n"
+                        },
+                        {
+                        "type": "input_image",
+                        "image_url": data_url_thanhtoan
+                        }
+                    ]
+                    },
+                    {
+                    "role": "user",
+                    "content": [
+                        {
+                        "type": "input_text",
+                        "text": "Hãy học nhận diện 4 loại bill KÉT TOÁN Hoặc TỔNG KẾT của HDBANK MBBANK VPBANK trong ảnh dưới đây.\n"
+                        },
+                        {
+                        "type": "input_image",
+                        "image_url": data_url_kettoan
+                        }
+                    ]
+                    },
+                    {
+                    "role": "user",
+                    "content": [
+                        {
+                        "type": "input_text",
+                        "text": "Ảnh dưới đây là hóa đơn POS, hãy trích xuất các trường đã định nghĩa trong prompt.\n"
+                        },
+                        {
+                        "type": "input_image",
+                        "image_url": data_url
                         }
                     ]
                     }

@@ -220,7 +220,7 @@ def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
         safe_get(result, "tong_so_tien"),
         ten_ngan_hang
     ])
-    print("key dup: ",key)
+    
     return key
 
 

@@ -286,7 +286,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         for img_b64 in image_b64_list:
             
             if helper.is_bill_ket_toan_related(caption.get("note")) ==False:
-                result = analyzer.analyze_bill_gpt(img_b64)    
+                result = analyzer.analyze_bill_version_new_gpt(img_b64)    
                 if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
                     print("Cả ten_ngan_hang và so_hoa_don so_lo so_the None")
                     continue
@@ -310,7 +310,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 else:
                     ten_ngan_hang = result.get("ten_ngan_hang")
             else:
-                result = analyzer.analyze_bill_kettoan_gpt(img_b64)
+                result = analyzer.analyze_bill_version_new_gpt(img_b64)
                 ten_ngan_hang= result.get("ten_ngan_hang")
             
             row = [
@@ -501,7 +501,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
         batch_id = str(uuid.uuid4())
         for img_b64 in image_b64_list:
             if helper.is_bill_ket_toan_related(caption.get("note")) ==False:        
-                result = analyzer.analyze_bill_gpt(img_b64)
+                result = analyzer.analyze_bill_version_new_gpt(img_b64)
                     
                 if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
                     print("Cả ten_ngan_hang và so_hoa_don None")
