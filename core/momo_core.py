@@ -212,7 +212,7 @@ def handle_momo_bill(update, context):
             duplicate = redis.is_duplicate_momo(key_check_dup)
             #duplicate = False
             if duplicate:
-                print("[DUPLICATE KEY]"+str(result.get("ma_giao_dich")))
+                print("[DUPLICATE KEY]"+str(key_check_dup))
                 message.reply_text(
                     (
                         "🚫 Hóa đơn đã được gửi trước đó:\n"
@@ -237,8 +237,11 @@ def handle_momo_bill(update, context):
                 f"🧾 {helper.fix_datetime(result.get('thoi_gian')) or ''} - "
             )
         percent = helper.parse_percent(caption['phi'])   
-        ck_ra_cal = sum -  percent*sum
+        tien_phi = helper.parse_currency_input_int(helper.safe_get(result, "tong_phi"))
+        ck_ra_cal = sum-tien_phi -  percent*sum
         ck_ra_caption_int =helper.parse_currency_input_int(caption['ck_ra'])
+        
+        print(tien_phi)
         print(ck_ra_caption_int)
         print(int(ck_ra_cal))
         if int(ck_ra_cal) == ck_ra_caption_int:
