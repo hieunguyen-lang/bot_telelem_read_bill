@@ -23,12 +23,14 @@ services:
     restart: always
     ports:
       - "6379:6379"
+    volumes:
+    - redis_data:/data
     networks:
       - bill_network
 
 volumes:
   mysql_data:
-
+  redis_data:
 networks:
   bill_network:
     external: true

@@ -63,6 +63,31 @@ CREATE TABLE IF NOT EXISTS hoa_don_dien
         unique (key_redis)
 );
 
+CREATE TABLE IF NOT EXISTS doi_ung
+(
+    id             bigint auto_increment
+        primary key,
+    nha_cung_cap   varchar(255)                        null,
+    ten_khach_hang varchar(255)                        null,
+    ma_khach_hang  varchar(50)                         null,
+    dia_chi        varchar(500)                        null,
+    ky_thanh_toan  varchar(100)                        null,
+    so_tien        bigint                              null,
+    ma_giao_dich   varchar(100)                        null,
+    thoi_gian      datetime                            null,
+    tai_khoan_the  varchar(100)                        null,
+    tong_phi       varchar(100)                        null,
+    trang_thai     varchar(50)                         null,
+    created_at     timestamp default CURRENT_TIMESTAMP null,
+    batch_id       varchar(250)                        null,
+    update_at      datetime                            null,
+    updated_at     datetime                            null,
+    nguoi_gui      varchar(255)                        null,
+    key_redis      varchar(255)                        null,
+    phi_phan_tram  varchar(255)                        null,
+    doi_tac  varchar(255)                        null
+
+);
 
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (

@@ -62,37 +62,34 @@ def validate_caption(update, chat_id, caption):
 
         message += (
             "📌 Ví dụ định dạng đúng:\n"
-            "`Khach: {Nguyễn Văn A}`\n"
-            "`Phi: {2%}`\n"
-            "`ck_ra: {0}`\n"
-            "`Stk: VPBANK - 0123456789 - Nguyễn Văn A`\n"
-            "`Note: {Khách chuyển khoản hộ em}`"
+            "`Doitac: {Nguyễn Văn A}`\n"
+            "`Phi: {3.5%}`\n"
+            "`Tong: {0}`\n"
+            "`Note: {Lô này tổng 50.069.782 giá nhập vào 3.5%}`"
         )
         update.message.reply_text(message, parse_mode="Markdown")
 
     # 🔄 Chuẩn hóa caption
     caption = normalize_caption(caption)
 
-    # Check theo nhóm
-    if str(chat_id) == GROUP_MOMO_ID:
-        required_keys = ["khach", "phi", "ck_ra", "stk", "note"]
+  
+    required_keys = ["doitac", "phi", "tong", "note"]
     
-        present_dict = helper.parse_message_momo(caption)
-        present_keys =list(present_dict.keys())
-        missing_keys = [key for key in required_keys if key not in present_keys]
+    present_dict = helper.parse_message_doiung(caption)
+    present_keys =list(present_dict.keys())
+    missing_keys = [key for key in required_keys if key not in present_keys]
 
-        if missing_keys:
-            send_format_guide(missing_keys)
-            return None, "❌ Thiếu key: " + ", ".join(missing_keys)
+    if missing_keys:
+        send_format_guide(missing_keys)
+        return None, "❌ Thiếu key: " + ", ".join(missing_keys)
 
-        parsed = helper.parse_message_momo(caption)
+    parsed = helper.parse_message_doiung(caption)
     
-        return parsed, None
+    return parsed, None
 
 
-    return {}, None
 
-def handle_photo_momo(update, context):
+def handle_photo_doiung(update, context):
     chat_id = update.effective_chat.id
     chat_title = update.effective_chat.title
     print(f"Ảnh gửi từ group {chat_title} (ID: {chat_id})")
@@ -184,13 +181,18 @@ def handle_momo_bill(update, context):
         list_invoice_key = []
         sum=0
     
-        batch_id =str(uuid.uuid4())
+        #batch_id =str(uuid.uuid4())
+        batch_id = "_".join([
+        helper.safe_get(caption, "doitac"),
+        helper.safe_get(caption, "phi"),
+        
+        ])
         for img_b64 in image_b64_list:
             
             result = analyzer.analyze_bill_momo_gpt(img_b64)    
                 
             key_check_dup = helper.generate_invoice_dien(result)
-            duplicate = redis.is_duplicate_momo(key_check_dup)
+            duplicate = redis.is_duplicate_doiung(key_check_dup)
             #duplicate = False
             if duplicate:
                 print("[DUPLICATE KEY]"+str(key_check_dup))
@@ -198,15 +200,16 @@ def handle_momo_bill(update, context):
                     (
                         "🚫 Hóa đơn đã được gửi trước đó:\n"
                         "Vui lòng không gửi hóa đơn bên ở dưới!\n"
-                        f"• Key: `{result.get('ma_giao_dich')}`\n"
+                        f"• Key: `{key_check_dup}`\n"
                         f"• Tên Khách: `{result.get('ten_khach_hang')}`\n"
                         f"• Số tiền: `{result.get('so_tien')}`\n"
-                        f"• Ngày giao dịch: `{result.get('thoi_gian')}`"
+                        f"• Ngày giao dịch: `{helper.safe_get(result, 'tong_phi')}`"
                     ),
                     parse_mode="Markdown"
                 )
 
                 return
+            
             row = [
                 timestamp,
                 helper.safe_get(result, "nha_cung_cap"),
@@ -222,11 +225,12 @@ def handle_momo_bill(update, context):
                 helper.safe_get(result, "trang_thai"),
                 batch_id,
                 full_name,
-                helper.safe_get(caption, "khach"),
+                helper.safe_get(caption, "phi"),
+                helper.safe_get(caption, "doitac"),
                 key_check_dup
+
             ]
 
-            
             
             list_invoice_key.append(key_check_dup)
             list_row_insert_db.append(row)
@@ -239,20 +243,18 @@ def handle_momo_bill(update, context):
                 f"🧾 {helper.fix_datetime(result.get('thoi_gian')) or ''} - "
             )
         percent = helper.parse_percent(caption['phi'])   
-        tien_phi = helper.parse_currency_input_int(helper.safe_get(result, "tong_phi"))
-        ck_ra_cal = sum-tien_phi -  percent*sum
-        ck_ra_caption_int =helper.parse_currency_input_int(caption['ck_ra'])
+        tong_cal = sum -  percent*sum
+        tong_int =helper.parse_currency_input_int(caption['tong'])
         
-        print(tien_phi)
-        print(ck_ra_caption_int)
-        print(int(ck_ra_cal))
-        if int(ck_ra_cal) == ck_ra_caption_int:
+        print(tong_int)
+        print(int(tong_cal))
+        if int(tong_cal) == tong_int:
             is_insert = insert_bill_rows(db,list_row_insert_db)
             if is_insert == None:
                 message.reply_text("⚠️ Có lỗi xảy ra trong quá trình lưu vào db: ")
                 return
             for item in list_invoice_key:
-                redis.mark_processed_momo(item)
+                redis.mark_processed_doiung(item)
             db.close()
             if res_mess:
                 reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
@@ -263,10 +265,9 @@ def handle_momo_bill(update, context):
         else:
             message.reply_text(
                     "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n"
-                    f"👉 Tổng rút: {sum:,}đ\n"
                     f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
-                    f"👉 ck_ra đúng phải là: {int(ck_ra_cal):,}đ\n\n"
-                    f"Sao chép nhanh: /{int(ck_ra_cal)}"
+                    f"👉 Tổng tôi tính là: {int(tong_cal):,}đ\n"
+                    f"Sao chép nhanh: /{int(tong_cal)}"
                 )
             return   
        
@@ -277,7 +278,7 @@ def handle_momo_bill(update, context):
 def insert_bill_rows(db, list_rows):
     print("Insert DB")
     query = """
-        INSERT INTO hoa_don_dien (
+        INSERT INTO doi_ung (
             update_at,
             nha_cung_cap,
             ten_khach_hang,
@@ -292,10 +293,11 @@ def insert_bill_rows(db, list_rows):
             trang_thai,
             batch_id,
             nguoi_gui,
-            ten_zalo,
+            phi_phan_tram,
+            doi_tac,
             key_redis
         ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
     """
 
