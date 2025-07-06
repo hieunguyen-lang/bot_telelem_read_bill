@@ -187,9 +187,9 @@ class GPTBill_Analyzer:
             print("Chuỗi ảnh không hợp lệ.")
             return None
         data_url = f"data:image/jpeg;base64,{base64_string}"
-        data_url_thanhtoan= convert_image_to_base64_file("data_mau\\bill_ketoan.jpeg",max_width=400)
-        data_url_kettoan = convert_image_to_base64_file("data_mau\\bill_ketoan.jpeg",max_width=400)
-        data_url_MPOS = convert_image_to_base64_file("data_mau\\MPOS.jpg",max_width=400)
+        data_url_thanhtoan= convert_image_to_base64_file("/app/data_mau/bill_ketoan.jpeg",max_width=400)
+        data_url_kettoan = convert_image_to_base64_file("/app/data_mau/bill_ketoan.jpeg",max_width=400)
+        data_url_MPOS = convert_image_to_base64_file("/app/data_mau/MPOS.jpg",max_width=400)
         try:
             response = self.client.responses.create(
                 prompt={
