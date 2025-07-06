@@ -246,7 +246,33 @@ def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
     ])
     print("[KEY]: ",key)
     return key
+def safe_get(d, key):
+        return (d.get(key) or '').strip().lower()
 
+def generate_invoice_dien(result: dict) -> str:
+    """
+    Tạo khóa duy nhất kiểm tra duplicate hóa đơn.
+    Ưu tiên các trường gần như không thể trùng nhau trong thực tế:
+    - Số hóa đơn
+    - Số lô
+    - Mã máy POS (TID)
+    - MID
+    - Ngày + Giờ giao dịch
+    - Tên ngân hàng
+    """
+    print("[Tạo key redis]")
+    def safe_get(d, key):
+        return (d.get(key) or '').strip().lower()
+
+    key = "_".join([
+        safe_get(result, "ten_khach_hang"),
+        safe_get(result, "ma_khach_hang"),
+        safe_get(result, "dia_chi"),
+        safe_get(result, "so_tien"),
+        safe_get(result, "ma_giao_dich"),
+    ])
+    print("[KEY]: ",key)
+    return key
 
 def normalize_text(text):
     # Chuyển về lowercase, loại bỏ dấu tiếng Việt
@@ -282,9 +308,13 @@ def is_bill_ket_toan_related(text, threshold=80):
     return False
 
 
-def fix_datetime(value: str) -> str:
+def fix_datetime(value) -> str:
     """
     Chuyển '10:15 - 04/07/2025' → '2025-07-04 10:15:00'
+    Nếu None → trả về thời gian hiện tại.
     """
+    if value is None:
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     dt = datetime.strptime(value, "%H:%M - %d/%m/%Y")
     return dt.strftime("%Y-%m-%d %H:%M:%S")

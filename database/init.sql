@@ -57,9 +57,10 @@ CREATE TABLE IF NOT EXISTS hoa_don_dien
     update_at      datetime                            null,
     updated_at     datetime                            null,
     nguoi_gui      varchar(255)                        null,
-    ten_zalo       varchar(50)                         not null,
-    constraint ma_giao_dich
-        unique (ma_giao_dich)
+    ten_zalo       varchar(50)                         null,
+    key_redis      varchar(255)                        null,
+    constraint key_redis
+        unique (key_redis)
 );
 
 

@@ -192,23 +192,24 @@ def handle_momo_bill(update, context):
             
             row = [
                 timestamp,
-                result.get("nha_cung_cap"),
-                result.get("ten_khach_hang"),
-                result.get("ma_khach_hang"),
-                result.get("dia_chi"),
-                result.get("ky_thanh_toan"),
-                result.get("so_tien"),
-                result.get("ma_giao_dich"),
+                helper.safe_get(result, "nha_cung_cap"),
+                helper.safe_get(result, "ten_khach_hang"),
+                helper.safe_get(result, "ma_khach_hang"),
+                helper.safe_get(result, "dia_chi"),
+                helper.safe_get(result, "ky_thanh_toan"),
+                helper.safe_get(result, "so_tien"),
+                helper.safe_get(result, "ma_giao_dich"),
                 helper.fix_datetime(result.get("thoi_gian")),
-                result.get("tai_khoan_the"),
-                result.get("tong_phi"),
-                result.get("trang_thai"),
+                helper.safe_get(result, "tai_khoan_the"),
+                helper.safe_get(result, "tong_phi"),
+                helper.safe_get(result, "trang_thai"),
                 batch_id,
                 full_name,
-                caption.get("khach")
+                helper.safe_get(caption, "khach")
             ]
-        
-            duplicate = redis.is_duplicate_momo(result.get("ma_giao_dich"))
+
+            key_check_dup = helper.generate_invoice_dien(result)
+            duplicate = redis.is_duplicate_momo(key_check_dup)
             #duplicate = False
             if duplicate:
                 print("[DUPLICATE KEY]"+str(result.get("ma_giao_dich")))
@@ -225,15 +226,15 @@ def handle_momo_bill(update, context):
                 )
 
                 return
-            list_invoice_key.append(result.get("ma_giao_dich"))
+            list_invoice_key.append(key_check_dup)
             list_row_insert_db.append(row)
             sum += int(result.get("so_tien") or 0)
             # Lưu lại kết quả để in ra cuối
             res_mess.append(
-                f"👤 {result.get('ten_khach_hang')} - "
+                f"👤 {helper.safe_get(result, 'ten_khach_hang')} - "
                 f"💰 {helper.format_currency_vn(result.get('so_tien')) or '?'} - "
-                f"📄 {result.get('ma_giao_dich') or ''} - "
-                f"🧾 {result.get('thoi_gian') or ''} - "
+                f"📄 {helper.safe_get(result, 'ma_giao_dich') or ''} - "
+                f"🧾 {helper.fix_datetime(result.get('thoi_gian')) or ''} - "
             )
         percent = helper.parse_percent(caption['phi'])   
         ck_ra_cal = sum -  percent*sum
