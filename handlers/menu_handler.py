@@ -127,7 +127,7 @@ def handle_text_search(update, context):
         reply_lines = [f"📊 *Tổng hoa hồng của* `{username}`:\n"]
 
         for label, from_date in time_ranges.items():
-            tong = search_hoa_hong_theo_thoi_gian(db, username, from_date, now)
+            tong = tong_so_tien_theo_thoi_gian(db, username, from_date, now)
             hoahong_002 = tong * 0.0002
             reply_lines.append(f"• {label}: `{tong:,.0f}` đ")
             reply_lines.append(f"  ↳ Nhận 0.02%: `{hoahong_002:,.0f}` đ")
@@ -135,21 +135,20 @@ def handle_text_search(update, context):
         update.message.reply_text("\n".join(reply_lines), parse_mode="Markdown")
         context.user_data.pop("search_mode", None)  # Xóa trạng thái search_mode
 # Truy vấn DB
-def search_hoa_hong_theo_thoi_gian(db, nguoi_gui, from_date, to_date):
+def tong_so_tien_theo_thoi_gian(db, nguoi_gui, from_date, to_date):
     """
-    Tổng hợp MAX(tong_so_tien) mỗi so_lo trong khoảng thời gian và tính tổng
+    Trả về tổng tong_so_tien trong khoảng thời gian cho 1 nguoi_gui
     """
     query = """
-        SELECT SUM(tong_tien_theo_lo) AS tong_hoa_hong
-        FROM (
-            SELECT MAX(tong_so_tien) AS tong_tien_theo_lo
-            FROM thong_tin_hoa_don
-            WHERE nguoi_gui = %s AND thoi_gian BETWEEN %s AND %s
-            GROUP BY so_hoa_don
-        ) AS tong_theo_lo
+        SELECT 
+            COALESCE(SUM(tong_so_tien), 0) AS tong_so_tien
+        FROM thong_tin_hoa_don
+        WHERE nguoi_gui = %s 
+          AND ngay_giao_dich BETWEEN %s AND %s
     """
     result = db.fetchone(query, [nguoi_gui, from_date, to_date])
-    return result["tong_hoa_hong"] if result and result["tong_hoa_hong"] else 0
+    return result["tong_so_tien"] if result and result["tong_so_tien"] else 0
+
 
 def search_hoa_don_rut(db, field_type, keyword):
     """
