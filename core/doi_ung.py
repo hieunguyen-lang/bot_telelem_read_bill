@@ -242,13 +242,11 @@ def handle_momo_bill(update, context):
                 f"📄 {helper.safe_get(result, 'ma_giao_dich') or ''} - "
                 f"🧾 {helper.fix_datetime(result.get('thoi_gian')) or ''} - "
             )
-        percent = helper.parse_percent(caption['phi'])   
-        tong_cal = sum -  percent*sum
         tong_int =helper.parse_currency_input_int(caption['tong'])
         
-        print(tong_int)
-        print(int(tong_cal))
-        if int(tong_cal) == tong_int:
+        print(sum)
+        print(int(tong_int))
+        if int(sum) == tong_int:
             is_insert = insert_bill_rows(db,list_row_insert_db)
             if is_insert == None:
                 message.reply_text("⚠️ Có lỗi xảy ra trong quá trình lưu vào db: ")
