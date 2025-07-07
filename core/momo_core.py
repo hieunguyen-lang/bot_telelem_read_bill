@@ -224,7 +224,7 @@ def handle_momo_bill(update, context):
                 full_name,
                 helper.safe_get(caption, "khach"),
                 key_check_dup,
-                int(0.1 *(int(result.get("so_tien") or 0)- helper.parse_currency_input_int(helper.safe_get(result, "tong_phi"))))
+                int(helper.parse_percent(caption['phi'])  *(int(result.get("so_tien") or 0)- helper.parse_currency_input_int(helper.safe_get(result, "tong_phi"))))
             ]
 
             print(row)
