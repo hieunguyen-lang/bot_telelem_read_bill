@@ -218,15 +218,16 @@ def handle_momo_bill(update, context):
                 helper.safe_get(result, "ma_giao_dich"),
                 helper.fix_datetime(result.get("thoi_gian")),
                 helper.safe_get(result, "tai_khoan_the"),
-                helper.safe_get(result, "tong_phi"),
+                helper.parse_currency_input_int(helper.safe_get(result, "tong_phi")),
                 helper.safe_get(result, "trang_thai"),
                 batch_id,
                 full_name,
                 helper.safe_get(caption, "khach"),
-                key_check_dup
+                key_check_dup,
+                int(0.1 *(int(result.get("so_tien") or 0)- helper.parse_currency_input_int(helper.safe_get(result, "tong_phi"))))
             ]
 
-            
+            print(row)
             
             list_invoice_key.append(key_check_dup)
             list_row_insert_db.append(row)
@@ -293,9 +294,10 @@ def insert_bill_rows(db, list_rows):
             batch_id,
             nguoi_gui,
             ten_zalo,
-            key_redis
+            key_redis,
+            phi_cong_ty_thu
         ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
     """
 
