@@ -241,7 +241,7 @@ def handle_momo_bill(update, context):
             )
         percent = helper.parse_percent(caption['phi'])   
         tien_phi = helper.parse_currency_input_int(helper.safe_get(result, "tong_phi"))
-        ck_ra_cal = sum-tien_phi -  percent*sum
+        ck_ra_cal = (sum-tien_phi) -  percent*(sum-tien_phi)
         ck_ra_caption_int =helper.parse_currency_input_int(caption['ck_ra'])
         
         print(tien_phi)
