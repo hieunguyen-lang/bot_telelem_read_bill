@@ -221,7 +221,7 @@ def handle_momo_bill(update, context):
                 helper.safe_get(result, "ma_giao_dich"),
                 helper.fix_datetime(result.get("thoi_gian")),
                 helper.safe_get(result, "tai_khoan_the"),
-                helper.safe_get(result, "tong_phi"),
+                int(helper.parse_percent(caption['phi'])  *(int(result.get("so_tien") or 0)- helper.parse_currency_input_int(helper.safe_get(result, "tong_phi")))),
                 helper.safe_get(result, "trang_thai"),
                 batch_id,
                 full_name,
@@ -246,6 +246,7 @@ def handle_momo_bill(update, context):
         
         print(sum)
         print(int(tong_int))
+        percent = helper.parse_percent(caption['phi']) 
         if int(sum) == tong_int:
             is_insert = insert_bill_rows(db,list_row_insert_db)
             if is_insert == None:
@@ -263,9 +264,8 @@ def handle_momo_bill(update, context):
         else:
             message.reply_text(
                     "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n"
-                    f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
-                    f"👉 Tổng tôi tính là: {int(tong_cal):,}đ\n"
-                    f"Sao chép nhanh: /{int(tong_cal)}"
+                    f"👉 Tổng tôi tính là: {int(sum):,}đ\n"
+                    f"Sao chép nhanh: /{int(sum)}"
                 )
             return   
        

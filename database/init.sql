@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS doi_ung
     ma_giao_dich   varchar(100)                        null,
     thoi_gian      datetime                            null,
     tai_khoan_the  varchar(100)                        null,
-    tong_phi       varchar(100)                        null,
+    tong_phi       bigint                               null,
     trang_thai     varchar(50)                         null,
     created_at     timestamp default CURRENT_TIMESTAMP null,
     batch_id       varchar(250)                        null,

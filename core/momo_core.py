@@ -183,7 +183,7 @@ def handle_momo_bill(update, context):
         list_row_insert_db = []
         list_invoice_key = []
         sum=0
-    
+        sum_tong_phi=0
         batch_id =str(uuid.uuid4())
         for img_b64 in image_b64_list:
             
@@ -207,6 +207,7 @@ def handle_momo_bill(update, context):
                 )
 
                 return
+            tong_phi_parse=helper.parse_currency_input_int(helper.safe_get(result, "tong_phi"))
             row = [
                 timestamp,
                 helper.safe_get(result, "nha_cung_cap"),
@@ -218,7 +219,7 @@ def handle_momo_bill(update, context):
                 helper.safe_get(result, "ma_giao_dich"),
                 helper.fix_datetime(result.get("thoi_gian")),
                 helper.safe_get(result, "tai_khoan_the"),
-                helper.parse_currency_input_int(helper.safe_get(result, "tong_phi")),
+                tong_phi_parse,
                 helper.safe_get(result, "trang_thai"),
                 batch_id,
                 full_name,
@@ -232,6 +233,7 @@ def handle_momo_bill(update, context):
             list_invoice_key.append(key_check_dup)
             list_row_insert_db.append(row)
             sum += int(result.get("so_tien") or 0)
+            sum_tong_phi +=tong_phi_parse
             # Lưu lại kết quả để in ra cuối
             res_mess.append(
                 f"👤 {helper.safe_get(result, 'ten_khach_hang')} - "
@@ -240,13 +242,14 @@ def handle_momo_bill(update, context):
                 f"🧾 {helper.fix_datetime(result.get('thoi_gian')) or ''} - "
             )
         percent = helper.parse_percent(caption['phi'])   
-        tien_phi = helper.parse_currency_input_int(helper.safe_get(result, "tong_phi"))
-        ck_ra_cal = (sum-tien_phi) -  percent*(sum-tien_phi)
+        
+        ck_ra_cal = (sum-sum_tong_phi) -  percent*(sum-sum_tong_phi)
         ck_ra_caption_int =helper.parse_currency_input_int(caption['ck_ra'])
         
-        print(tien_phi)
+        print(sum_tong_phi)
         print(ck_ra_caption_int)
         print(int(ck_ra_cal))
+        
         if int(ck_ra_cal) == ck_ra_caption_int:
             is_insert = insert_bill_rows(db,list_row_insert_db)
             if is_insert == None:
@@ -266,6 +269,7 @@ def handle_momo_bill(update, context):
                     "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n"
                     f"👉 Tổng rút: {sum:,}đ\n"
                     f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
+                    f"👉 Tổng phí: {int(sum_tong_phi):,}đ\n\n"
                     f"👉 ck_ra đúng phải là: {int(ck_ra_cal):,}đ\n\n"
                     f"Sao chép nhanh: /{int(ck_ra_cal)}"
                 )
