@@ -193,7 +193,7 @@ def handle_momo_bill(update, context):
                 
             key_check_dup = helper.generate_invoice_dien(result)
             duplicate = redis.is_duplicate_doiung(key_check_dup)
-            #duplicate = False
+            duplicate = False
             if duplicate:
                 print("[DUPLICATE KEY]"+str(key_check_dup))
                 message.reply_text(
@@ -250,7 +250,7 @@ def handle_momo_bill(update, context):
         if int(sum) == tong_int:
             is_insert = insert_bill_rows(db,list_row_insert_db)
             if is_insert == None:
-                message.reply_text("⚠️ Có lỗi xảy ra trong quá trình lưu vào db: ")
+                message.reply_text("⚠️ Hóa đơn đã được gửi trước đó: ")
                 return
             for item in list_invoice_key:
                 redis.mark_processed_doiung(item)

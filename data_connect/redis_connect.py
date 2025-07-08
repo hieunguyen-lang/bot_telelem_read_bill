@@ -6,7 +6,7 @@ import dotenv
 from dotenv import load_dotenv
 load_dotenv() 
 class RedisDuplicateChecker:
-    def __init__(self, host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"), db=0, key_prefix='processed_invoices',momo_key_prefix='momo_invoices',doiung_key_prefix='momo_invoices'
+    def __init__(self, host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"), db=0, key_prefix='processed_invoices',momo_key_prefix='momo_invoices',doiung_key_prefix='doi_ung_invoices'
 ):
         self.client = redis.Redis(
             host=host,
