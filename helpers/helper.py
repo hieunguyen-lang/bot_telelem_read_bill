@@ -336,3 +336,27 @@ def fix_datetime(value) -> str:
 
     dt = datetime.strptime(value, "%H:%M - %d/%m/%Y")
     return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def tach_so_tai_khoan(text: str):
+    """
+    Tách số tài khoản ra khỏi text.
+    Trả về: (so_tai_khoan, phan_con_lai)
+
+    Nếu text None/rỗng hoặc không tìm thấy số tài khoản: trả ('', '')
+    """
+    if not text:  # text is None hoặc ''
+        return '', ''
+
+    text = text.strip()
+
+    match = re.search(r'\b\d{6,15}\b', text)
+    if match:
+        so_tai_khoan = match.group()
+        phan_con_lai = text.replace(so_tai_khoan, "").strip()
+        print("so_tai_khoan",so_tai_khoan)
+        print("phan_con_lai",phan_con_lai)
+        return so_tai_khoan, phan_con_lai
+
+    # Không tìm thấy STK
+    return '', ''

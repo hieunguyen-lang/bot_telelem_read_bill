@@ -18,6 +18,7 @@ from data_connect.redis_connect import RedisDuplicateChecker
 from ai_core.gpt_ai_filter import GPTBill_Analyzer
 from rapidfuzz import fuzz
 import unicodedata
+import html
 from dotenv import load_dotenv
 load_dotenv()  # Tự động tìm và load từ .env
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -405,12 +406,14 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             print("percent: ",percent)
             print("cal_phi_dich_vu: ",cal_phi_dich_vu)
             if int(cal_phi_dich_vu) != tien_phi_int:
+                cal_phi_dich_vu_html= html.escape(str(int(cal_phi_dich_vu)))
                 message.reply_text(
                     "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
                     f"👉 Tổng rút: {sum:,}đ\n"
                     f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
                     f"👉 Phí đúng phải là: {int(cal_phi_dich_vu):,}đ\n\n"
-                    f"Sao chép nhanh: /{int(cal_phi_dich_vu)}"
+                    f"Sao chép nhanh: <code>{cal_phi_dich_vu_html}</code>",
+                    parse_mode="HTML"
                 )
                 return   
         else:
@@ -469,11 +472,20 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             redis.mark_processed(item)
         db.close()
         if res_mess:
-            reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+            if stk_khach != '':
+                stk_number, messs = helper.tach_so_tai_khoan(stk_khach)
+                stk_number = html.escape(stk_number)
+                messs = html.escape(messs)
+                ck_ra_int_html= html.escape(str(ck_ra_int))
+                reply_msg = "@tuantienti1989, @Hieungoc288\n\n"
+                reply_msg += f"STK: <code>{stk_number}</code>\n\n"
+                reply_msg += f"CTK: {messs}\n"
+                reply_msg += f"Tổng số tiền: <code>{ck_ra_int_html}</code>\n\n"
+            reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
         else:
             reply_msg = "⚠️ Không xử lý được hóa đơn nào."
 
-        message.reply_text(reply_msg)
+        message.reply_text(reply_msg,parse_mode="HTML")
     except Exception as e:
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
@@ -625,12 +637,14 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             print("tien_phi_int: ",tien_phi_int)
             if int(cal_phi_dich_vu) != tien_phi_int:
                 try:
+                    cal_phi_dich_vu_html= html.escape(str(int(cal_phi_dich_vu)))
                     message.reply_text(
                         "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
                         f"👉 Tổng rút: {sum:,}đ\n"
                         f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
                         f"👉 Phí đúng phải là: {int(cal_phi_dich_vu):,}đ\n\n"
-                        f"Sao chép nhanh: /{int(cal_phi_dich_vu)}"
+                        f"Sao chép nhanh: /<code>{cal_phi_dich_vu_html}</code>",
+                        parse_mode="HTML"
                     )
                 except Exception as e:
                     print("Lỗi khi gửi message:", e)
@@ -693,10 +707,20 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             redis.mark_processed(item)
         db.close()
         if res_mess:
-            reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+            if stk_khach != '':
+                stk_number, messs = helper.tach_so_tai_khoan(stk_khach)
+                stk_number = html.escape(stk_number)
+                messs = html.escape(messs)
+                ck_ra_int_html= html.escape(str(ck_ra_int))
+                reply_msg = "@tuantienti1989, @Hieungoc288\n\n"
+                reply_msg += f"STK: <code>{stk_number}</code>\n\n"
+                reply_msg += f"CTK: {messs}\n\n"
+                reply_msg += f"Tổng số tiền: <code>{ck_ra_int_html}</code>\n\n"
+            reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+            
         else:
             reply_msg = "⚠️ Không xử lý được hóa đơn nào."
-        message.reply_text(reply_msg)
+        message.reply_text(reply_msg,parse_mode="HTML")
     except Exception as e:
         print(str(e))
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))

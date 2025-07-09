@@ -18,6 +18,7 @@ from data_connect.redis_connect import RedisDuplicateChecker
 from ai_core.gpt_ai_filter import GPTBill_Analyzer
 from rapidfuzz import fuzz
 import unicodedata
+import html
 from dotenv import load_dotenv
 load_dotenv()  # Tự động tìm và load từ .env
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -258,21 +259,36 @@ def handle_momo_bill(update, context):
             for item in list_invoice_key:
                 redis.mark_processed_momo(item)
             db.close()
-            if res_mess:
-                reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
-            else:
-                reply_msg = "⚠️ Không xử lý được hóa đơn nào."
+            try:
+                if res_mess:
+                    if caption.get('stk') != '':
+                        stk_number, messs = helper.tach_so_tai_khoan(caption.get('stk'))
+                        stk_number = html.escape(stk_number)
+                        messs = html.escape(messs)
+                        ck_ra_int_html= html.escape(str(int(ck_ra_cal)))
+                        reply_msg = "@tuantienti1989, @Hieungoc288\n\n"
+                        reply_msg += f"STK: <code>{stk_number}</code>\n\n"
+                        reply_msg += f"CTK: {messs}\n\n"
+                        reply_msg += f"Tổng số tiền: <code>{ck_ra_int_html}</code>\n"
+                    reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+                    
+                else:
+                    reply_msg = "⚠️ Không xử lý được hóa đơn nào."
 
-            message.reply_text(reply_msg)
+                message.reply_text(reply_msg,parse_mode="HTML")
+            except:
+                reply_msg = "Hóa đơn đã được lưu vào db!."
+                message.reply_text(reply_msg,parse_mode="HTML")
         else:
             message.reply_text(
-                    "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n"
-                    f"👉 Tổng rút: {sum:,}đ\n"
-                    f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
-                    f"👉 Tổng phí: {int(sum_tong_phi):,}đ\n\n"
-                    f"👉 ck_ra đúng phải là: {int(ck_ra_cal):,}đ\n\n"
-                    f"Sao chép nhanh: /{int(ck_ra_cal)}"
-                )
+                "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n"
+                f"👉 Tổng rút: {sum:,}đ\n"
+                f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
+                f"👉 Tổng phí: {int(sum_tong_phi):,}đ\n\n"
+                f"👉 ck_ra đúng phải là: {int(ck_ra_cal):,}đ\n\n"
+                f"Sao chép nhanh: <code>{int(ck_ra_cal)}</code>",
+                parse_mode="HTML"
+            )
             return   
        
     except Exception as e:

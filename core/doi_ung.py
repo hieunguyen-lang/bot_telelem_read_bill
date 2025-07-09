@@ -18,6 +18,7 @@ from data_connect.redis_connect import RedisDuplicateChecker
 from ai_core.gpt_ai_filter import GPTBill_Analyzer
 from rapidfuzz import fuzz
 import unicodedata
+import html
 from dotenv import load_dotenv
 load_dotenv()  # Tự động tìm và load từ .env
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -262,10 +263,12 @@ def handle_momo_bill(update, context):
 
             message.reply_text(reply_msg)
         else:
+            sum_html = html.escape(str(int(sum)))
             message.reply_text(
                     "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n"
                     f"👉 Tổng tôi tính là: {int(sum):,}đ\n"
-                    f"Sao chép nhanh: /{int(sum)}"
+                    f"Sao chép nhanh: <code>{sum_html}</code>",
+                    parse_mode="HTML"
                 )
             return   
        
