@@ -486,7 +486,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                         reply_msg += f"🏦 STK: <code>{stk_number}</code>\n"
                         reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n"
                         reply_msg += f"👤 CTK: <b>{ctk}</b>\n"
-                        reply_msg += f"💰 Tổng số tiền: <code>{ck_ra_int_html}</code>\n\n"
+                        reply_msg += f"💰 Tổng số tiền chuyển lại khách: <code>{ck_ra_int_html}</code> VND\n\n"
 
                         reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
                         message.reply_photo(
@@ -735,7 +735,7 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                         reply_msg += f"🏦 STK: <code>{stk_number}</code>\n"
                         reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n"
                         reply_msg += f"👤 CTK: <b>{ctk}</b>\n"
-                        reply_msg += f"💰 Tổng số tiền: <code>{ck_ra_int_html}</code>\n\n"
+                        reply_msg += f"💰 Tổng số tiền chuyển lại khách: <code>{ck_ra_int_html}</code> VND\n\n"
 
                         reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
                         message.reply_photo(
