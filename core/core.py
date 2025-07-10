@@ -198,7 +198,7 @@ def handle_photo(update, context):
             
         elif str(chat_id) == GROUP_RUT_ID:
         
-            handle_selection_rut(update, context, selected_type="bill")
+            handle_selection_rut(update, context)
 
         return
     
@@ -233,7 +233,7 @@ def handle_photo(update, context):
             handle_selection_dao(update, context, selected_type="bill")
         elif str(chat_id) == GROUP_RUT_ID:
             print("Đây là group Rút")
-            handle_selection_rut(update, context, selected_type="bill")
+            handle_selection_rut(update, context)
 
     timer = threading.Timer(3.0, process_media_group)
     media_group_storage[media_group_id]["timer"] = timer
