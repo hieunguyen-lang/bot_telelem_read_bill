@@ -398,12 +398,14 @@ def validate_stk_nganhang_chutk(text: str) -> tuple[bool, str]:
         return False, "❌ Định dạng không hợp lệ. Cần đúng dạng: STK - Ngân hàng - Chủ TK."
 
     stk_raw, bank_raw, ctk_raw = [p.strip() for p in parts]
-
+    print(stk_raw)
+    print(bank_raw)
+    print(ctk_raw)
     if not stk_raw:
         return False, "❌ Thiếu số tài khoản."
-    if not re.fullmatch(r'[\d\.]{6,25}', stk_raw):
-        return False, f"❌ Số tài khoản không hợp lệ: {stk_raw}"
-
+    if not re.fullmatch(r'[\d\.]{6,19}', stk_raw):
+        return False, f"❌ Số tài khoản không hợp lệ (phải là 6–19 chữ số): {stk_raw}"
+    
     if not bank_raw:
         return False, "❌ Thiếu tên ngân hàng."
 

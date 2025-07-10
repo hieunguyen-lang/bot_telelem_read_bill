@@ -279,6 +279,7 @@ def handle_momo_bill(update, context):
                         qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(int(ck_ra_cal)))
 
                         reply_msg = "@tuantienti1989, @Hieungoc288\n\n"
+                        reply_msg += f"<b>Bạn vui lòng kiểm tra lại thông tin và chuyển khoản theo nội dung dưới đây:</b>\n"
                         reply_msg += f"🏦 STK: <code>{stk_number}</code>\n"
                         reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n"
                         reply_msg += f"👤 CTK: <b>{ctk}</b>\n"
