@@ -384,7 +384,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             invoice_key = helper.generate_invoice_key_simple(result, ten_ngan_hang)
             print("vào đây")
             duplicate = redis.is_duplicate(invoice_key)
-            duplicate = False
+            #duplicate = False
             if duplicate:
                 print("[DUPLICATE KEY]"+str(invoice_key))
                 message.reply_text(
