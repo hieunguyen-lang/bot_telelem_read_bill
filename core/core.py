@@ -336,6 +336,27 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             else:
                 result = analyzer.analyze_bill_kettoan_gpt(img_b64)
                 ten_ngan_hang= result.get("ten_ngan_hang")
+
+            invoice_key = helper.generate_invoice_key_simple(result, ten_ngan_hang)
+            duplicate = redis.is_duplicate(invoice_key)
+            duplicate = False
+            if duplicate:
+                print("[DUPLICATE KEY]"+str(invoice_key))
+                message.reply_text(
+                    f"🚫 Hóa đơn đã được gửi trước đó:\n"
+                    f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
+                    f"• Key: `{invoice_key}`\n"
+                    f"• Ngân hàng: `{ten_ngan_hang}`\n"
+                    f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
+                    f"• Số lô: `{result.get('so_lo')}`\n"
+                    f"• TID: `{result.get('tid')}`\n"
+                    f"• MID: `{result.get('mid')}`\n"
+                    f"• Ngày giao dịch : `{result.get('ngay_giao_dich')}`\n"
+                    f"• Giờ giao dịch: `{result.get('gio_giao_dich')}`\n"
+                    f"• Khách: *{caption.get('khach', 'Không rõ')}*",
+                    parse_mode="Markdown"
+                )
+                return
             
             row = [
                 timestamp,
@@ -362,7 +383,8 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 str(ck_vao_int),
                 None,  # stk_cty
                 None,  # stk_khach
-                str(helper.parse_percent(caption.get('phi', '')))
+                str(helper.parse_percent(caption.get('phi', ''))),
+                invoice_key
             ]
         
             data = {
@@ -381,27 +403,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "TÊN POS": result.get("ten_may_pos"),
                 "PHÍ DV": tien_phi_int,
             }
-            invoice_key = helper.generate_invoice_key_simple(result, ten_ngan_hang)
-            print("vào đây")
-            duplicate = redis.is_duplicate(invoice_key)
-            #duplicate = False
-            if duplicate:
-                print("[DUPLICATE KEY]"+str(invoice_key))
-                message.reply_text(
-                    f"🚫 Hóa đơn đã được gửi trước đó:\n"
-                    f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
-                    f"• Key: `{invoice_key}`\n"
-                    f"• Ngân hàng: `{ten_ngan_hang}`\n"
-                    f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
-                    f"• Số lô: `{result.get('so_lo')}`\n"
-                    f"• TID: `{result.get('tid')}`\n"
-                    f"• MID: `{result.get('mid')}`\n"
-                    f"• Ngày giao dịch : `{result.get('ngay_giao_dich')}`\n"
-                    f"• Giờ giao dịch: `{result.get('gio_giao_dich')}`\n"
-                    f"• Khách: *{caption.get('khach', 'Không rõ')}*",
-                    parse_mode="Markdown"
-                )
-                return
+            
             list_data.append(data)
             list_invoice_key.append(invoice_key)
             list_row_insert_db.append(row)
@@ -587,7 +589,10 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                     ten_ngan_hang = result.get("ten_ngan_hang")
             else:
                 result = analyzer.analyze_bill_kettoan_gpt(img_b64)
-            
+            invoice_key = helper.generate_invoice_key_simple(result, ten_ngan_hang)
+            duplicate = redis.is_duplicate(invoice_key)
+            #duplicate = False
+            print("-------------Duplicate: ",duplicate)
             row = [
                 timestamp,
                 full_name,
@@ -613,7 +618,8 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                 str(ck_vao_int),
                 None,  # stk_cty
                 None,  # stk_khach
-                str(helper.parse_percent(caption.get('phi', '')))
+                str(helper.parse_percent(caption.get('phi', ''))),
+                invoice_key
             ]
               # Ghi vào MySQL
             
@@ -633,10 +639,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                 "TÊN POS": result.get("ten_may_pos"),
                 "PHÍ DV": tien_phi_int,
             }
-            invoice_key = helper.generate_invoice_key_simple(result, ten_ngan_hang)
-            duplicate = redis.is_duplicate(invoice_key)
-            #duplicate = False
-            print("-------------Duplicate: ",duplicate)
+            
             if duplicate ==True:
                 print("[DUPLICATE KEY]"+str(invoice_key))
                 message.reply_text(
@@ -814,8 +817,9 @@ def insert_bill_rows(db, list_rows):
             ck_vao,
             stk_khach,
             stk_cty,
-            phan_tram_phi
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            phan_tram_phi,
+            key_redis
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     rowcount, err = db.executemany(query, list_rows)
     return rowcount, err
