@@ -1,25 +1,28 @@
 
 import base64
 import uuid
-from helpers import helper,generate_qr
 import json
 import re
 import threading
 import os
 import gspread
+import unicodedata
+import html
+import base64
 from oauth2client.service_account import ServiceAccountCredentials
 from telegram.ext import Updater, MessageHandler, Filters
 from telegram.ext import CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-import base64
+
 from gemi_ai import GeminiBillAnalyzer
 from data_connect.mysql_db_connector import MySQLConnector
 from data_connect.redis_connect import RedisDuplicateChecker
 from ai_core.gpt_ai_filter import GPTBill_Analyzer
 from rapidfuzz import fuzz
-import unicodedata
-import html
+
 from dotenv import load_dotenv
+from helpers import helper,generate_qr
+from helpers.bankpin import BankBin
 load_dotenv()  # Tự động tìm và load từ .env
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 PROXY_URL = os.getenv("PROXY_URL")
@@ -89,7 +92,7 @@ def validate_caption(update, chat_id, caption):
             "`Stk: VPBANK - 0123456789 - Nguyễn Văn A`\n"
             "`Note: {Khách chuyển khoản hộ em}`"
         )
-        update.message.reply_text(message, parse_mode="Markdown")
+        return message
 
     # 🔄 Chuẩn hóa caption
     caption = normalize_caption(caption)
@@ -103,16 +106,24 @@ def validate_caption(update, chat_id, caption):
         missing_keys = [key for key in required_keys if key not in present_keys]
 
         if missing_keys:
-            send_format_guide(missing_keys)
-            return None, "❌ Thiếu key: " + ", ".join(missing_keys)
+            errmess = send_format_guide(missing_keys)
+            return None, errmess
 
         parsed = helper.parse_message_dao(caption)
         if 'dao' not in parsed:
-            update.message.reply_text("❌ Lỗi: Không tìm thấy trường 'Dao' sau khi parse.")
-            return None, "❌ parse_message_dao thiếu key 'dao'"
+            
+            return None, "❌ thiếu key 'dao'"
+        #print(int(present_dict.get("ck_vao")))
+        if helper.parse_currency_input_int(present_dict.get("ck_ra")) == 0 and helper.parse_currency_input_int(present_dict.get("ck_vao"))==0:
+            return None, "❌  ck_ vao và ck_ ra không thể cùng bằng: 0"
+        
+        validate, err  = helper.validate_stk_nganhang_chutk(present_dict.get('stk'))
+        
+        if  validate == False:
+            return None, err
         return parsed, None
 
-    elif str(chat_id) == GROUP_RUT_ID:
+    elif str(chat_id) == GROUP_RUT_ID:  
         required_keys = ["khach", "sdt", "rut", "phi", "tien_phi", "tong", "lich_canh_bao", "ck_vao", "ck_ra", "stk", "note"]
 
         present_dict = helper.parse_message_rut(caption)
@@ -120,13 +131,21 @@ def validate_caption(update, chat_id, caption):
         missing_keys = [key for key in required_keys if key not in present_keys]
 
         if missing_keys:    
-            send_format_guide(missing_keys)
-            return None, "❌ Thiếu key: " + ", ".join(missing_keys)
+            errmess = send_format_guide(missing_keys)
+            return None, errmess
 
         parsed = helper.parse_message_rut(caption)
         if 'rut' not in parsed:
-            update.message.reply_text("❌ Lỗi: Không tìm thấy trường 'Rut' sau khi parse.")
-            return None, "❌ parse_message_rut thiếu key 'rut'"
+    
+            return None, "❌  thiếu key 'rut'"
+        
+        if helper.parse_currency_input_int(present_dict.get("ck_ra")) == 0 and helper.parse_currency_input_int(present_dict.get("ck_vao"))==0:
+            return None, "❌  ck_ vao và ck_ ra không thể cùng bằng: 0"
+        
+        validate, err  = helper.validate_stk_nganhang_chutk(present_dict.get('stk'))
+        
+        if  validate == False:
+            return None, err
         return parsed, None
 
     return {}, None
@@ -167,6 +186,7 @@ def handle_photo(update, context):
     if message.media_group_id is None:
         parsed, error_msg = validate_caption(update,chat_id, message.caption)
         if error_msg:
+            message.reply_text(error_msg,parse_mode="Markdown")
             return
 
         context.user_data["image_data"] = [img_b64]
@@ -186,6 +206,7 @@ def handle_photo(update, context):
         # Ảnh đầu tiên của media group → parse caption luôn
         parsed, error_msg = validate_caption(update, chat_id, message.caption)
         if error_msg:
+            message.reply_text(error_msg,parse_mode="Markdown")
             return
 
         media_group_storage[media_group_id] = {
@@ -425,12 +446,15 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         stk_khach = None
         stk_cty = None
         print("-----------------Gán stk--------------")
-        if ck_ra_int == 0 and ck_vao_int !=0:
+        if ck_ra_int == 0 and ck_vao_int ==0:
+            return
+        elif ck_ra_int == 0 and ck_vao_int !=0:
             stk_khach = ''
             stk_cty = caption.get("stk")
         elif ck_ra_int != 0 and ck_vao_int ==0:
             stk_khach = caption.get("stk")
             stk_cty = ''
+        
         elif is_tienmat:
             stk_khach = ''
             stk_cty = "Tiền mặt"

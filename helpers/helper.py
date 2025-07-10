@@ -1,11 +1,12 @@
-
-from io import BytesIO
-from PIL import Image
 import base64
-from rapidfuzz import fuzz
 import re
 import unicodedata
+from unidecode import unidecode
+from rapidfuzz import fuzz
+from io import BytesIO
+from PIL import Image
 from datetime import datetime
+from helpers.bankpin import BankBin
 DISPLAY_KEYS = {
     "khach": "Khach",
     "sdt": "Sdt",
@@ -349,7 +350,8 @@ def tach_stk_nganhang_chutk(text: str):
         return '', '', ''
 
     text = text.strip()
-
+    text = text.replace('.', '')
+    text = text.replace(',', '')
     # Sử dụng regex để tìm STK
     match = re.search(r'\b\d{6,15}\b', text)
     if not match:
@@ -373,3 +375,43 @@ def tach_stk_nganhang_chutk(text: str):
         ten_ngan_hang, chu_tai_khoan = '', ''
 
     return so_tai_khoan, ten_ngan_hang, chu_tai_khoan
+
+
+def normalize_bank_name(name: str) -> str:
+    """Chuẩn hoá tên ngân hàng để so khớp key trong map."""
+    return unidecode(name).lower().replace(" ", "").replace("-", "")
+
+
+def validate_stk_nganhang_chutk(text: str) -> tuple[bool, str]:
+    """
+    Kiểm tra text có đúng định dạng: STK - Ngân hàng - Chủ TK
+    Và tên ngân hàng có hợp lệ không.
+    Trả về: (True, "") hoặc (False, "lý do lỗi")
+    """
+    if not text or not text.strip():
+        return False, "❌ Chuỗi trống."
+
+    text = text.strip()
+
+    parts = text.split('-')
+    if len(parts) != 3:
+        return False, "❌ Định dạng không hợp lệ. Cần đúng dạng: STK - Ngân hàng - Chủ TK."
+
+    stk_raw, bank_raw, ctk_raw = [p.strip() for p in parts]
+
+    if not stk_raw:
+        return False, "❌ Thiếu số tài khoản."
+    if not re.fullmatch(r'[\d\.]{6,25}', stk_raw):
+        return False, f"❌ Số tài khoản không hợp lệ: {stk_raw}"
+
+    if not bank_raw:
+        return False, "❌ Thiếu tên ngân hàng."
+
+    bank_norm = normalize_bank_name(bank_raw)
+    if not BankBin.exists(bank_norm):
+        return False, f"❌ Ngân hàng không hợp lệ hoặc không được hỗ trợ: {bank_raw}"
+
+    if not ctk_raw:
+        return False, "❌ Thiếu tên chủ tài khoản."
+
+    return True, ""

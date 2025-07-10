@@ -1,24 +1,26 @@
 
 import base64
 import uuid
-from helpers import helper, generate_qr
 import json
 import re
 import threading
 import os
 import gspread
+import unicodedata
+import html
+import base64
 from oauth2client.service_account import ServiceAccountCredentials
 from telegram.ext import Updater, MessageHandler, Filters
 from telegram.ext import CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-import base64
 from gemi_ai import GeminiBillAnalyzer
 from data_connect.mysql_db_connector import MySQLConnector
 from data_connect.redis_connect import RedisDuplicateChecker
 from ai_core.gpt_ai_filter import GPTBill_Analyzer
 from rapidfuzz import fuzz
-import unicodedata
-import html
+
+from helpers import helper, generate_qr
+from helpers.bankpin import BankBin
 from dotenv import load_dotenv
 load_dotenv()  # Tự động tìm và load từ .env
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -69,7 +71,7 @@ def validate_caption(update, chat_id, caption):
             "`Stk: VPBANK - 0123456789 - Nguyễn Văn A`\n"
             "`Note: {Khách chuyển khoản hộ em}`"
         )
-        update.message.reply_text(message, parse_mode="Markdown")
+        return message
 
     # 🔄 Chuẩn hóa caption
     caption = normalize_caption(caption)
@@ -83,9 +85,14 @@ def validate_caption(update, chat_id, caption):
         missing_keys = [key for key in required_keys if key not in present_keys]
 
         if missing_keys:
-            send_format_guide(missing_keys)
-            return None, "❌ Thiếu key: " + ", ".join(missing_keys)
-
+            errmess = send_format_guide(missing_keys)
+            return None,errmess
+        if  helper.parse_currency_input_int(present_dict['ck_ra'])==0:
+            return None, "❌  Bạn chưa điền ck_ra"
+        validate, err  = helper.validate_stk_nganhang_chutk(present_dict.get('stk'))
+        
+        if  validate == False:
+            return None, err
         parsed = helper.parse_message_momo(caption)
     
         return parsed, None
@@ -124,6 +131,7 @@ def handle_photo_momo(update, context):
     if message.media_group_id is None:
         parsed, error_msg = validate_caption(update,chat_id, message.caption)
         if error_msg:
+            message.reply_text(error_msg,parse_mode="Markdown")
             return
 
         context.user_data["image_data"] = [img_b64]
@@ -138,6 +146,7 @@ def handle_photo_momo(update, context):
         # Ảnh đầu tiên của media group → parse caption luôn
         parsed, error_msg = validate_caption(update, chat_id, message.caption)
         if error_msg:
+            message.reply_text(error_msg,parse_mode="Markdown")
             return
 
         media_group_storage[media_group_id] = {
