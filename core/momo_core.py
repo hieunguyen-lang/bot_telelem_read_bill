@@ -1,7 +1,7 @@
 
 import base64
 import uuid
-from helpers import helper
+from helpers import helper, generate_qr
 import json
 import re
 import threading
@@ -206,7 +206,6 @@ def handle_momo_bill(update, context):
                     ),
                     parse_mode="Markdown"
                 )
-
                 return
             tong_phi_parse=helper.parse_currency_input_int(helper.safe_get(result, "tong_phi"))
             row = [
@@ -247,14 +246,14 @@ def handle_momo_bill(update, context):
         ck_ra_cal = (sum-sum_tong_phi) -  percent*(sum-sum_tong_phi)
         ck_ra_caption_int =helper.parse_currency_input_int(caption['ck_ra'])
         
-        print(sum_tong_phi)
-        print(ck_ra_caption_int)
-        print(int(ck_ra_cal))
+        print("sum_tong_phi: ",sum_tong_phi)
+        print("ck_ra_caption_int: ",ck_ra_caption_int)
+        print("ck_ra_cal: ",int(ck_ra_cal))
         
         if int(ck_ra_cal) == ck_ra_caption_int:
-            is_insert = insert_bill_rows(db,list_row_insert_db)
-            if is_insert == None:
-                message.reply_text("⚠️ Có lỗi xảy ra trong quá trình lưu vào db: ")
+            _, err = insert_bill_rows(db,list_row_insert_db)
+            if err:
+                message.reply_text(f"⚠️ Hóa đơn đã được gửi trước đó: {str(err)}")
                 return
             for item in list_invoice_key:
                 redis.mark_processed_momo(item)
@@ -262,21 +261,36 @@ def handle_momo_bill(update, context):
             try:
                 if res_mess:
                     if caption.get('stk') != '':
-                        stk_number, messs = helper.tach_so_tai_khoan(caption.get('stk'))
+                        stk_number, bank, name = helper.tach_stk_nganhang_chutk(caption.get('stk'))
                         stk_number = html.escape(stk_number)
-                        messs = html.escape(messs)
-                        ck_ra_int_html= html.escape(str(int(ck_ra_cal)))
+                        bank = html.escape(bank)
+                        ctk = html.escape(name)
+
+                        ck_ra_int_html = html.escape(str(helper.format_currency_vn(int(ck_ra_cal))))
+                        qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(int(ck_ra_cal)))
+
                         reply_msg = "@tuantienti1989, @Hieungoc288\n\n"
-                        reply_msg += f"STK: <code>{stk_number}</code>\n\n"
-                        reply_msg += f"CTK: {messs}\n\n"
-                        reply_msg += f"Tổng số tiền: <code>{ck_ra_int_html}</code>\n"
-                    reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
-                    
+                        reply_msg += f"🏦 STK: <code>{stk_number}</code>\n"
+                        reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n"
+                        reply_msg += f"👤 CTK: <b>{ctk}</b>\n"
+                        reply_msg += f"💰 Tổng số tiền: <code>{ck_ra_int_html}</code>\n\n"
+
+                        reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+                        message.reply_photo(
+                            photo=qr_buffer,
+                            caption=reply_msg,
+                            parse_mode="HTML"
+                        )
+                    else:
+                        reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+                        message.reply_text(reply_msg,parse_mode="HTML")
                 else:
                     reply_msg = "⚠️ Không xử lý được hóa đơn nào."
 
-                message.reply_text(reply_msg,parse_mode="HTML")
-            except:
+                    message.reply_text(reply_msg,parse_mode="HTML")
+                
+            except Exception as e:
+                print(str(e))
                 reply_msg = "Hóa đơn đã được lưu vào db!."
                 message.reply_text(reply_msg,parse_mode="HTML")
         else:
@@ -321,8 +335,8 @@ def insert_bill_rows(db, list_rows):
         )
     """
 
-    result =db.executemany(query, list_rows)
-    return  result
+    rowcount, err = db.executemany(query, list_rows)
+    return rowcount, err
     
 
 

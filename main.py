@@ -12,7 +12,7 @@ updater = Updater(
     token=os.getenv("TELEGRAM_TOKEN"),
     request_kwargs={'proxy_url': os.getenv("PROXY_URL")}
 )
-
+print("🔑 TELEGRAM_TOKEN:", repr(os.getenv("TELEGRAM_TOKEN")))
 bot = updater.bot
 chat_id_dao = int(os.getenv("GROUP_THONG_BAO"))  # từ .env
 

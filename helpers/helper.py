@@ -338,25 +338,38 @@ def fix_datetime(value) -> str:
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def tach_so_tai_khoan(text: str):
+def tach_stk_nganhang_chutk(text: str):
     """
-    Tách số tài khoản ra khỏi text.
-    Trả về: (so_tai_khoan, phan_con_lai)
+    Tách số tài khoản, tên ngân hàng và chủ tài khoản từ text.
+    Trả về: (so_tai_khoan, ten_ngan_hang, chu_tai_khoan)
 
-    Nếu text None/rỗng hoặc không tìm thấy số tài khoản: trả ('', '')
+    Nếu text None/rỗng hoặc không hợp lệ: trả ('', '', '')
     """
-    if not text:  # text is None hoặc ''
-        return '', ''
+    if not text:
+        return '', '', ''
 
     text = text.strip()
 
+    # Sử dụng regex để tìm STK
     match = re.search(r'\b\d{6,15}\b', text)
-    if match:
-        so_tai_khoan = match.group()
-        phan_con_lai = text.replace(so_tai_khoan, "").strip()
-        print("so_tai_khoan",so_tai_khoan)
-        print("phan_con_lai",phan_con_lai)
-        return so_tai_khoan, phan_con_lai
+    if not match:
+        return '', '', ''
 
-    # Không tìm thấy STK
-    return '', ''
+    so_tai_khoan = match.group()
+    phan_con_lai = text.replace(so_tai_khoan, '', 1).strip()
+
+    # Bỏ dấu '-' nếu có
+    if phan_con_lai.startswith('-'):
+        phan_con_lai = phan_con_lai[1:].strip()
+
+    # Tách phần còn lại theo dấu '-'
+    parts = [p.strip() for p in phan_con_lai.split('-', 1)]
+
+    if len(parts) == 2:
+        ten_ngan_hang, chu_tai_khoan = parts
+    elif len(parts) == 1:
+        ten_ngan_hang, chu_tai_khoan = parts[0], ''
+    else:
+        ten_ngan_hang, chu_tai_khoan = '', ''
+
+    return so_tai_khoan, ten_ngan_hang, chu_tai_khoan

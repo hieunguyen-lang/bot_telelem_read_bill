@@ -10,4 +10,4 @@ redis=RedisDuplicateChecker()
 #redis.remove_invoice_momo("92924939651")
 
 
-redis.remove_invoice_doiung("nguyễn thị loan_pd2500v210455_thôn trầm hạ - xã quang lãng (a1.12)_542717_93183402723")
+redis.remove_invoice_doiung("ngô tấn ( hoà )_095584_thôn trung chánh, xã lộc an_2246274_93396286229")

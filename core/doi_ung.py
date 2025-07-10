@@ -249,9 +249,9 @@ def handle_momo_bill(update, context):
         print(int(tong_int))
         percent = helper.parse_percent(caption['phi']) 
         if int(sum) == tong_int:
-            is_insert = insert_bill_rows(db,list_row_insert_db)
-            if is_insert == None:
-                message.reply_text("⚠️ Hóa đơn đã được gửi trước đó: ")
+            _, err = insert_bill_rows(db,list_row_insert_db)
+            if err:
+                message.reply_text(f"⚠️ Hóa đơn đã được gửi trước đó: {str(err)}")
                 return
             for item in list_invoice_key:
                 redis.mark_processed_doiung(item)
@@ -302,8 +302,8 @@ def insert_bill_rows(db, list_rows):
         )
     """
 
-    result =db.executemany(query, list_rows)
-    return  result
+    rowcount, err = db.executemany(query, list_rows)
+    return rowcount, err
     
 
 

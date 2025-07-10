@@ -1,7 +1,7 @@
 
 import base64
 import uuid
-from helpers import helper
+from helpers import helper,generate_qr
 import json
 import re
 import threading
@@ -38,7 +38,7 @@ scope = [
 ]
 creds = ServiceAccountCredentials.from_json_keyfile_name("your-creds.json", scope)
 client = gspread.authorize(creds)
-print("🔑 GEMINI_API_KEY:", repr(GEMINI_API_KEY))
+
 #analyzer = GeminiBillAnalyzer()
 analyzer = GPTBill_Analyzer()
 db = MySQLConnector(
@@ -461,9 +461,10 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         else:
             sheet = spreadsheet.worksheet("MPOS")
         try:
-            is_insert =insert_bill_rows(db,list_row_insert_db)
-            if is_insert is None:
-                message.reply_text("⚠️ Có lỗi xảy ra trong quá trình lưu vào db: ")
+            _, err = insert_bill_rows(db,list_row_insert_db)
+            if err:
+                message.reply_text(f"⚠️ Hóa đơn đã được gửi trước đó: {str(err)}")
+                return
             append_multiple_by_headers(sheet, list_data)
         except Exception as e:
             message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
@@ -472,20 +473,33 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             redis.mark_processed(item)
         db.close()
         if res_mess:
-            if stk_khach != '':
-                stk_number, messs = helper.tach_so_tai_khoan(stk_khach)
-                stk_number = html.escape(stk_number)
-                messs = html.escape(messs)
-                ck_ra_int_html= html.escape(str(ck_ra_int))
-                reply_msg = "@tuantienti1989, @Hieungoc288\n\n"
-                reply_msg += f"STK: <code>{stk_number}</code>\n\n"
-                reply_msg += f"CTK: {messs}\n"
-                reply_msg += f"Tổng số tiền: <code>{ck_ra_int_html}</code>\n\n"
-            reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+            if caption.get('stk') != '':
+                        stk_number, bank, name = helper.tach_stk_nganhang_chutk(caption.get('stk'))
+                        stk_number = html.escape(stk_number)
+                        bank = html.escape(bank)
+                        ctk = html.escape(name)
+                        ck_ra_int_html= html.escape(str(helper.format_currency_vn(ck_ra_int)))
+                        
+                        qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(ck_ra_int))
+
+                        reply_msg = "@tuantienti1989, @Hieungoc288\n\n"
+                        reply_msg += f"🏦 STK: <code>{stk_number}</code>\n"
+                        reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n"
+                        reply_msg += f"👤 CTK: <b>{ctk}</b>\n"
+                        reply_msg += f"💰 Tổng số tiền: <code>{ck_ra_int_html}</code>\n\n"
+
+                        reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+                        message.reply_photo(
+                            photo=qr_buffer,
+                            caption=reply_msg,
+                            parse_mode="HTML"
+                        )
+            else:
+                reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+                message.reply_text(reply_msg,parse_mode="HTML")
         else:
             reply_msg = "⚠️ Không xử lý được hóa đơn nào."
-
-        message.reply_text(reply_msg,parse_mode="HTML")
+            message.reply_text(reply_msg,parse_mode="HTML")
     except Exception as e:
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
@@ -696,9 +710,10 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
                 sheet = spreadsheet.worksheet("MPOS")
 
         try:
-            is_insert =insert_bill_rows(db,list_row_insert_db)
-            if is_insert is None:
-                message.reply_text("⚠️ Có lỗi xảy ra trong quá trình lưu vào db: ")
+            _, err = insert_bill_rows(db,list_row_insert_db)
+            if err:
+                message.reply_text(f"⚠️ Hóa đơn đã được gửi trước đó: {str(err)}")
+                return
             append_multiple_by_headers(sheet, list_data)
         except Exception as e:
             message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
@@ -707,20 +722,33 @@ def handle_selection_rut(update, context, selected_type="bill",sheet_id=SHEET_RU
             redis.mark_processed(item)
         db.close()
         if res_mess:
-            if stk_khach != '':
-                stk_number, messs = helper.tach_so_tai_khoan(stk_khach)
-                stk_number = html.escape(stk_number)
-                messs = html.escape(messs)
-                ck_ra_int_html= html.escape(str(ck_ra_int))
-                reply_msg = "@tuantienti1989, @Hieungoc288\n\n"
-                reply_msg += f"STK: <code>{stk_number}</code>\n\n"
-                reply_msg += f"CTK: {messs}\n\n"
-                reply_msg += f"Tổng số tiền: <code>{ck_ra_int_html}</code>\n\n"
-            reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
-            
+            if caption.get('stk') != '':
+                        stk_number, bank, name = helper.tach_stk_nganhang_chutk(caption.get('stk'))
+                        stk_number = html.escape(stk_number)
+                        bank = html.escape(bank)
+                        ctk = html.escape(name)
+                        ck_ra_int_html= html.escape(str(helper.format_currency_vn(ck_ra_int)))
+                        
+                        qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(ck_ra_int))
+
+                        reply_msg = "@tuantienti1989, @Hieungoc288\n\n"
+                        reply_msg += f"🏦 STK: <code>{stk_number}</code>\n"
+                        reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n"
+                        reply_msg += f"👤 CTK: <b>{ctk}</b>\n"
+                        reply_msg += f"💰 Tổng số tiền: <code>{ck_ra_int_html}</code>\n\n"
+
+                        reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+                        message.reply_photo(
+                            photo=qr_buffer,
+                            caption=reply_msg,
+                            parse_mode="HTML"
+                        )
+            else:
+                reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+                message.reply_text(reply_msg,parse_mode="HTML")
         else:
             reply_msg = "⚠️ Không xử lý được hóa đơn nào."
-        message.reply_text(reply_msg,parse_mode="HTML")
+            message.reply_text(reply_msg,parse_mode="HTML")
     except Exception as e:
         print(str(e))
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
@@ -756,8 +784,8 @@ def insert_bill_rows(db, list_rows):
             phan_tram_phi
         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
-    result = db.executemany(query, list_rows)
-    return result
+    rowcount, err = db.executemany(query, list_rows)
+    return rowcount, err
     
 
 
