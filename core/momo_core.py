@@ -195,8 +195,9 @@ def handle_momo_bill(update, context):
         sum=0
         sum_tong_phi=0
         batch_id =str(uuid.uuid4())
+        count_img=0
         for img_b64 in image_b64_list:
-            
+            count_img += 1
             result = analyzer.analyze_bill_momo_gpt(img_b64)    
                 
             key_check_dup = helper.generate_invoice_dien(result)
@@ -211,7 +212,8 @@ def handle_momo_bill(update, context):
                         f"• Key: `{result.get('ma_giao_dich')}`\n"
                         f"• Tên Khách: `{result.get('ten_khach_hang')}`\n"
                         f"• Số tiền: `{result.get('so_tien')}`\n"
-                        f"• Ngày giao dịch: `{result.get('thoi_gian')}`"
+                        f"• Ngày giao dịch: `{result.get('thoi_gian')}`\n"
+                        f"• Vị trí ảnh trùng: `{str(count_img)}`"
                     ),
                     parse_mode="Markdown"
                 )
