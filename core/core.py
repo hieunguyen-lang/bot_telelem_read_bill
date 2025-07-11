@@ -55,6 +55,7 @@ media_group_storage = {}
 redis=RedisDuplicateChecker()
 
 def validate_caption(update, chat_id, caption):
+    
     if not caption:
         return None, "❌ Không tìm thấy nội dung để xử lý. Vui lòng thêm caption cho ảnh."
 
@@ -102,6 +103,7 @@ def validate_caption(update, chat_id, caption):
         required_keys = ["khach", "sdt", "dao", "phi", "tien_phi", "tong", "lich_canh_bao", "ck_vao", "ck_ra", "stk", "note"]
     
         present_dict = helper.parse_message_dao(caption)
+        print("present_dict:",present_dict)
         present_keys =list(present_dict.keys())
         missing_keys = [key for key in required_keys if key not in present_keys]
 
@@ -127,6 +129,7 @@ def validate_caption(update, chat_id, caption):
         required_keys = ["khach", "sdt", "rut", "phi", "tien_phi", "tong", "lich_canh_bao", "ck_vao", "ck_ra", "stk", "note"]
 
         present_dict = helper.parse_message_rut(caption)
+        print("present_dict:",present_dict)
         present_keys =list(present_dict.keys())
         missing_keys = [key for key in required_keys if key not in present_keys]
 
@@ -155,10 +158,7 @@ def handle_photo(update, context):
     chat_title = update.effective_chat.title
     print(f"Ảnh gửi từ group {chat_title} (ID: {chat_id})")
     
-    # ❌ Bỏ qua nếu tin nhắn không đến từ group hợp lệ
-    # print(chat_id, type(chat_id))
-    # print(GROUP_DAO_ID, type(GROUP_DAO_ID))
-    # print(GROUP_RUT_ID, type(GROUP_RUT_ID))
+  
     if str(chat_id) not in [str(GROUP_DAO_ID), str(GROUP_RUT_ID), str(GROUP_MOMO_ID)]:
         
         print(f"⛔ Tin nhắn từ group lạ (ID: {chat_id}) → Bỏ qua")
@@ -500,6 +500,11 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 db.connection.rollback()
                 return
             append_multiple_by_headers(sheet, list_data)
+            if len(res_mess) == 0:
+              reply_msg = "⚠️ Không xử lý được hóa đơn nào."
+              message.reply_text(reply_msg)
+              return  
+            hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html)
             for item in list_invoice_key:
                 redis.mark_processed(item)
         except Exception as e:
@@ -508,15 +513,15 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 redis.remove_invoice(item)
             message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
             return
-        hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html)
+        
         db.connection.commit()
     except Exception as e:
+        
         db.connection.rollback()
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
 def hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html):
-    if res_mess:
-        if caption.get('stk') != '':
+    if caption.get('stk') != '':
                     stk_number, bank, name = helper.tach_stk_nganhang_chutk(caption.get('stk'))
                     stk_number = html.escape(stk_number)
                     bank = html.escape(bank)
@@ -540,12 +545,9 @@ def hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, 
                             caption=reply_msg,
                             parse_mode="HTML"
                         )
-        else:
+    else:
             reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
             message.reply_text(reply_msg,parse_mode="HTML")
-    else:
-        reply_msg = "⚠️ Không xử lý được hóa đơn nào."
-        message.reply_text(reply_msg,parse_mode="HTML")
 
 def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
     message = update.message
@@ -770,6 +772,11 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                 db.connection.rollback()
                 return
             append_multiple_by_headers(sheet, list_data)
+            if len(res_mess) == 0:
+              reply_msg = "⚠️ Không xử lý được hóa đơn nào."
+              message.reply_text(reply_msg)
+              return 
+            hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html)
             for item in list_invoice_key:
                 redis.mark_processed(item)
         except Exception as e:
@@ -778,7 +785,8 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                 redis.remove_invoice(item)
             message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
             return  
-        hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html)
+        
+        
         db.connection.commit()
     except Exception as e:
         db.connection.rollback()
@@ -786,8 +794,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
 def hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html):
-    if res_mess:
-        if caption.get('stk') != '':
+    if caption.get('stk') != '':
                     stk_number, bank, name = helper.tach_stk_nganhang_chutk(caption.get('stk'))
                     stk_number = html.escape(stk_number)
                     bank = html.escape(bank)
@@ -814,12 +821,11 @@ def hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, c
                             caption=reply_msg,
                             parse_mode="HTML"
                         )
-        else:
-            reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
-            message.reply_text(reply_msg,parse_mode="HTML")
     else:
-        reply_msg = "⚠️ Không xử lý được hóa đơn nào."
+        reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
         message.reply_text(reply_msg,parse_mode="HTML")
+
+        
 
 def insert_bill_rows(db, list_rows):
     print("Insert DB")
