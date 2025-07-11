@@ -196,12 +196,15 @@ def handle_momo_bill(update, context):
         sum_tong_phi=0
         batch_id =str(uuid.uuid4())
         count_img=0
+        seen_keys = set()
+
         for img_b64 in image_b64_list:
             count_img += 1
             result = analyzer.analyze_bill_momo_gpt(img_b64)    
                 
             key_check_dup = helper.generate_invoice_dien(result)
             duplicate = redis.is_duplicate_momo(key_check_dup)
+
             #duplicate = False
             if duplicate:
                 print("[DUPLICATE KEY]"+str(key_check_dup))
@@ -209,8 +212,8 @@ def handle_momo_bill(update, context):
                     (
                         "🚫 Hóa đơn đã được gửi trước đó:\n"
                         "Vui lòng không gửi hóa đơn bên ở dưới!\n"
-                        f"• Ảnh Thứ: `{count_img}` bị trùng:"
-                        f"• Key: `{result.get('ma_giao_dich')}`\n"
+                        f"• Ảnh: `{count_img}` bị trùng\n"
+                        f"• Key: `{key_check_dup}`\n"
                         f"• Tên Khách: `{result.get('ten_khach_hang')}`\n"
                         f"• Số tiền: `{result.get('so_tien')}`\n"
                         f"• Ngày giao dịch: `{result.get('thoi_gian')}`\n"
@@ -218,6 +221,19 @@ def handle_momo_bill(update, context):
                     parse_mode="Markdown"
                 )
                 return
+            
+            if key_check_dup in seen_keys:
+                message.reply_text(
+                    (
+                        "🚫 Hóa đơn đã được gửi trước đó:\n"
+                        "Có thể bạn gửi 2 hóa đơn bị trùng:\n"
+                        f"• Ảnh: `{count_img}` bị trùng\n"
+                        
+                    ),
+                    parse_mode="Markdown"
+                )
+                return
+            seen_keys.add(key_check_dup)
             tong_phi_parse=helper.parse_currency_input_int(helper.safe_get(result, "tong_phi"))
             row = [
                 timestamp,
@@ -258,7 +274,7 @@ def handle_momo_bill(update, context):
         ck_ra_cal = (sum-sum_tong_phi) -  percent*(sum-sum_tong_phi)
         ck_ra_caption_int =helper.parse_currency_input_int(caption['ck_ra'])
         
-        print("sum_tong_phi: ",sum_tong_phi)
+        print("sum_tong_phi: ",int(percent*(sum-sum_tong_phi)))
         print("ck_ra_caption_int: ",ck_ra_caption_int)
         print("ck_ra_cal: ",int(ck_ra_cal))
         
@@ -267,21 +283,14 @@ def handle_momo_bill(update, context):
                 "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n"
                 f"👉 Tổng rút: {sum:,}đ\n"
                 f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
-                f"👉 Tổng phí: {int(sum_tong_phi):,}đ\n\n"
+                f"👉 Tổng phí: {int(percent*(sum-sum_tong_phi)):,}đ\n\n"
                 f"👉 ck_ra đúng phải là: {int(ck_ra_cal):,}đ\n\n"
                 f"Sao chép nhanh: <code>{int(ck_ra_cal)}</code>",
                 parse_mode="HTML"
             )
             return
         
-        try:
-            handle_sendmess(message, caption, res_mess, ck_ra_cal)
-                
-        except Exception as e:
-            print(str(e))
-            reply_msg = f"Có Lỗi xảy ra trong quá trình xử lí: {str(e)}"
-            message.reply_text(reply_msg,parse_mode="HTML")
-            return
+        
     
         _, err = insert_bill_rows(db,list_row_insert_db)
         if err:
@@ -290,13 +299,24 @@ def handle_momo_bill(update, context):
             return
         for item in list_invoice_key:
             redis.mark_processed_momo(item)
-        
+        try:
+            mess,photo = handle_sendmess(caption, res_mess, ck_ra_cal)
+            
+            helper.send_long_message(message,mess,photo)
+        except Exception as e:
+            for item in list_invoice_key:
+                redis.mark_processed_momo(item)
+            db.connection.rollback()
+            raise e
+            
         db.connection.commit()
     except Exception as e:
         db.connection.rollback()
+        for item in list_invoice_key:
+            redis.remove_invoice_momo(item)
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
-def handle_sendmess(message, caption, res_mess, ck_ra_cal):
+def handle_sendmess( caption, res_mess, ck_ra_cal):
     if res_mess:
             if caption.get('stk') != '':
                 stk_number, bank, name = helper.tach_stk_nganhang_chutk(caption.get('stk'))
@@ -307,26 +327,22 @@ def handle_sendmess(message, caption, res_mess, ck_ra_cal):
                 ck_ra_int_html = html.escape(str(helper.format_currency_vn(int(ck_ra_cal))))
                 qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(int(ck_ra_cal)))
 
-                reply_msg = "@tuantienti1989, @Hieungoc288\n\n"
-                reply_msg += f"<b>Bạn vui lòng kiểm tra lại thông tin và chuyển khoản theo nội dung dưới đây:</b>\n\n"
+                reply_msg = f"<b>Bạn vui lòng kiểm tra lại thông tin và chuyển khoản theo nội dung dưới đây:</b>\n\n"
                 reply_msg += f"🏦 STK: <code>{stk_number}</code>\n\n"
                 reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n\n"
                 reply_msg += f"👤 CTK: <b>{ctk}</b>\n\n"
                 reply_msg += f"💰 Tổng số tiền chuyển lại khách: <code>{ck_ra_int_html}</code> VND\n\n"
 
                 reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
-                message.reply_photo(
-                            photo=qr_buffer,
-                            caption=reply_msg,
-                            parse_mode="HTML"
-                        )
+                return  reply_msg,qr_buffer
             else:
                 reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
-                message.reply_text(reply_msg,parse_mode="HTML")
+                return reply_msg,None
     else:
-            reply_msg = "⚠️ Không xử lý được hóa đơn nào."
+        reply_msg = "⚠️ Không xử lý được hóa đơn nào."
 
-            message.reply_text(reply_msg,parse_mode="HTML")
+        return reply_msg,None
+        
 
 
 def insert_bill_rows(db, list_rows):

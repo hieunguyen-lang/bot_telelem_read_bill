@@ -1,6 +1,7 @@
 import base64
 import re
 import unicodedata
+import html
 from unidecode import unidecode
 from rapidfuzz import fuzz
 from io import BytesIO
@@ -277,20 +278,35 @@ def generate_invoice_key_simple(result: dict, ten_ngan_hang: str) -> str:
 def safe_get(d, key):
         return (d.get(key) or '').strip().lower()
 
+
+def remove_accents(s: str) -> str:
+    """
+    Loại bỏ dấu tiếng Việt & ký tự đặc biệt
+    """
+    s = unicodedata.normalize('NFD', s)
+    s = s.encode('ascii', 'ignore').decode('utf-8')
+    s = re.sub(r'\s+', '', s)  # bỏ toàn bộ khoảng trắng
+    return s
+
 def generate_invoice_dien(result: dict) -> str:
-   
     print("[Tạo key redis]")
+
     def safe_get(d, key):
         return (d.get(key) or '').strip().lower()
 
-    key = "_".join([
-        safe_get(result, "ten_khach_hang").strip(),
+    parts = [
+        safe_get(result, "ten_khach_hang"),
         safe_get(result, "ma_khach_hang"),
-        safe_get(result, "dia_chi").strip(),
+        safe_get(result, "dia_chi"),
         safe_get(result, "so_tien"),
         safe_get(result, "ma_giao_dich"),
-    ])
-    print("[KEY]: ",key)
+    ]
+
+    parts_clean = [remove_accents(p) for p in parts]
+
+    key = "_".join(parts_clean)
+
+    print("[KEY]:", key)
     return key
 
 def normalize_text(text):
@@ -329,14 +345,27 @@ def is_bill_ket_toan_related(text, threshold=80):
 
 def fix_datetime(value) -> str:
     """
-    Chuyển '10:15 - 04/07/2025' → '2025-07-04 10:15:00'
-    Nếu None → trả về thời gian hiện tại.
+    Chuyển định dạng thời gian đầu vào thành 'YYYY-MM-DD HH:MM:SS'.
+    Nếu None hoặc định dạng không đúng → trả về thời gian hiện tại.
     """
-    if value is None:
+    if not value:
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    dt = datetime.strptime(value, "%H:%M - %d/%m/%Y")
-    return dt.strftime("%Y-%m-%d %H:%M:%S")
+    value = value.strip()
+    formats = [
+        "%H:%M - %d/%m/%Y",  # có dấu -
+        "%H:%M %d/%m/%Y",    # không dấu -
+    ]
+
+    for fmt in formats:
+        try:
+            dt = datetime.strptime(value, fmt)
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            continue
+
+    # fallback
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def tach_stk_nganhang_chutk(text: str):
@@ -417,3 +446,38 @@ def validate_stk_nganhang_chutk(text: str) -> tuple[bool, str]:
         return False, "❌ Thiếu tên chủ tài khoản."
 
     return True, ""
+
+
+def send_long_message(message, full_text, photo=None, max_len=1024):
+    """
+    Gửi full_text (str) kèm ảnh QR (nếu có), tự động chia nhỏ nếu quá dài.
+    """
+    if not full_text:
+        message.reply_text("⚠️ Không xử lý được hóa đơn nào.", parse_mode="HTML")
+        return
+
+    # Cắt thành nhiều phần
+    chunks = []
+    while full_text:
+        if len(full_text) <= max_len:
+            chunks.append(full_text.strip())
+            break
+
+        split_pos = full_text.rfind('\n', 0, max_len)
+        if split_pos == -1:
+            split_pos = max_len
+
+        chunks.append(full_text[:split_pos].strip())
+        full_text = full_text[split_pos:].strip()
+
+    # Gửi ảnh + phần đầu tiên
+    if photo:
+        message.reply_photo(
+            photo=photo,
+            caption=chunks.pop(0),
+            parse_mode="HTML"
+        )
+
+    # Gửi phần còn lại
+    for part in chunks:
+        message.reply_text(part, parse_mode="HTML")

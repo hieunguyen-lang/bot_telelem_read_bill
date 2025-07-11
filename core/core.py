@@ -491,7 +491,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         else:
             sheet = spreadsheet.worksheet("MPOS")
         
-        hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html)
+        
 
         try:
             _, err = insert_bill_rows(db,list_row_insert_db)
@@ -508,7 +508,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 redis.remove_invoice(item)
             message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
             return
-        
+        hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html)
         db.connection.commit()
     except Exception as e:
         db.connection.rollback()
@@ -523,7 +523,10 @@ def hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, 
                     ctk = html.escape(name)
                     qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(ck_ra_int))
 
-                    reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi đưa cho khách chuyển khoản phí về công ty, và đừng quên kiểm tra bank xem nhận được tiền phí dịch vụ chưa nhé !</b>\n\n"
+                    if ck_ra_int_html:
+                        reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản lại cho khách hàng xem số liệu đã đúng chưa nhé!</b>\n\n"
+                    if ck_vao_int_html:
+                        reply_msg += f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi đưa cho khách chuyển khoản phí về công ty, và đừng quên kiểm tra bank xem nhận được tiền phí dịch vụ chưa nhé !</b>\n\n"
                     reply_msg += f"🏦 STK: <code><b>{stk_number}</b></code>\n\n"
                     reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n\n"
                     reply_msg += f"👤 CTK: <b>{ctk}</b>\n\n"
@@ -758,7 +761,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
             sheet = spreadsheet.worksheet("MPOS")
         else:
                 sheet = spreadsheet.worksheet("MPOS")
-        hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html)
+        
         
         try:
             _, err = insert_bill_rows(db,list_row_insert_db)
@@ -775,7 +778,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                 redis.remove_invoice(item)
             message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
             return  
-        
+        hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html)
         db.connection.commit()
     except Exception as e:
         db.connection.rollback()
@@ -793,7 +796,11 @@ def hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, c
                         
                     qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(ck_ra_int))
 
-                    reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản lại cho khách hàng xem số liệu đã đúng chưa nhé!</b>\n"
+                    
+                    if ck_ra_int_html:
+                        reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản lại cho khách hàng xem số liệu đã đúng chưa nhé!</b>\n\n"
+                    if ck_vao_int_html:
+                        reply_msg += f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi đưa cho khách chuyển khoản phí về công ty, và đừng quên kiểm tra bank xem nhận được tiền phí dịch vụ chưa nhé !</b>\n\n"
                     reply_msg += f"🏦 STK: <code>{stk_number}</code>\n\n"
                     reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n\n"
                     reply_msg += f"👤 CTK: <b>{ctk}</b>\n\n"

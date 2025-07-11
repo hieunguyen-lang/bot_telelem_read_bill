@@ -47,7 +47,7 @@ class MySQLConnector:
             return self.cursor.rowcount, None
         except Error as e:
             print("❌ Lỗi khi thực thi nhiều dòng:", e)
-            #self.connection.rollback()
+            self.connection.rollback()
             return None, e
         
     def fetchone(self, query, params=None):
