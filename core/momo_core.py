@@ -209,11 +209,11 @@ def handle_momo_bill(update, context):
                     (
                         "🚫 Hóa đơn đã được gửi trước đó:\n"
                         "Vui lòng không gửi hóa đơn bên ở dưới!\n"
+                        f"• Ảnh Thứ: `{count_img}` bị trùng:"
                         f"• Key: `{result.get('ma_giao_dich')}`\n"
                         f"• Tên Khách: `{result.get('ten_khach_hang')}`\n"
                         f"• Số tiền: `{result.get('so_tien')}`\n"
                         f"• Ngày giao dịch: `{result.get('thoi_gian')}`\n"
-                        f"• Vị trí ảnh trùng: `{str(count_img)}`"
                     ),
                     parse_mode="Markdown"
                 )

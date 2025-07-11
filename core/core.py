@@ -307,8 +307,9 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         ten_ngan_hang=None
         tien_phi_int =helper.parse_currency_input_int(caption['tien_phi'])
         batch_id =str(uuid.uuid4())
+        count_img =0
         for img_b64 in image_b64_list:
-            
+            count_img += 1
             if helper.is_bill_ket_toan_related(caption.get("note")) ==False:
                 result = analyzer.analyze_bill_version_new_gpt(img_b64)    
                 if result.get("ten_ngan_hang") is None and result.get("so_hoa_don") is None and result.get("so_lo") is None and result.get("so_the") is None:
@@ -345,6 +346,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 message.reply_text(
                     f"🚫 Hóa đơn đã được gửi trước đó:\n"
                     f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
+                    f"• Ảnh Thứ: `{count_img}` bị trùng:"
                     f"• Key: `{invoice_key}`\n"
                     f"• Ngân hàng: `{ten_ngan_hang}`\n"
                     f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
@@ -568,7 +570,9 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
         ten_ngan_hang=None
         tien_phi_int =helper.parse_currency_input_int(caption['tien_phi'])
         batch_id = str(uuid.uuid4())
+        count_img=0
         for img_b64 in image_b64_list:
+            count_img +=1
             if helper.is_bill_ket_toan_related(caption.get("note")) ==False:        
                 result = analyzer.analyze_bill_version_new_gpt(img_b64)
                     
@@ -600,6 +604,24 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
             duplicate = redis.is_duplicate(invoice_key)
             #duplicate = False
             print("-------------Duplicate: ",duplicate)
+            if duplicate ==True:
+                print("[DUPLICATE KEY]"+str(invoice_key))
+                message.reply_text(
+                    f"🚫 Hóa đơn đã được gửi trước đó:\n"
+                    f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
+                    f"• Ảnh Thứ: `{count_img}` bị trùng:"
+                    f"• Key: `{invoice_key}`\n"
+                    f"• Ngân hàng: `{ten_ngan_hang}`\n"
+                    f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
+                    f"• Số lô: `{result.get('so_lo')}`\n"
+                    f"• TID: `{result.get('tid')}`\n"
+                    f"• MID: `{result.get('mid')}`\n"
+                    f"• Ngày giao dịch : `{result.get('ngay_giao_dich')}`\n"
+                    f"• Giờ giao dịch: `{result.get('gio_giao_dich')}`\n"
+                    f"• Khách: *{caption.get('khach', 'Không rõ')}*",
+                    parse_mode="Markdown"
+                )
+                return
             row = [
                 timestamp,
                 full_name,
@@ -647,23 +669,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                 "PHÍ DV": tien_phi_int,
             }
             
-            if duplicate ==True:
-                print("[DUPLICATE KEY]"+str(invoice_key))
-                message.reply_text(
-                    f"🚫 Hóa đơn đã được gửi trước đó:\n"
-                    f"Vui lòng không gửi hóa đơn bên ở dưới!\n"
-                    f"• Key: `{invoice_key}`\n"
-                    f"• Ngân hàng: `{ten_ngan_hang}`\n"
-                    f"• Số HĐ: `{result.get('so_hoa_don')}`\n"
-                    f"• Số lô: `{result.get('so_lo')}`\n"
-                    f"• TID: `{result.get('tid')}`\n"
-                    f"• MID: `{result.get('mid')}`\n"
-                    f"• Ngày giao dịch : `{result.get('ngay_giao_dich')}`\n"
-                    f"• Giờ giao dịch: `{result.get('gio_giao_dich')}`\n"
-                    f"• Khách: *{caption.get('khach', 'Không rõ')}*",
-                    parse_mode="Markdown"
-                )
-                return
+            
             list_invoice_key.append(invoice_key)
             list_data.append(data)
             list_row_insert_db.append(row)
