@@ -534,7 +534,7 @@ def hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, 
                     qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(ck_ra_int))
 
                     if ck_ra_int_html:
-                        reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản lại cho khách hàng xem số liệu đã đúng chưa nhé!</b>\n\n"
+                        reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản ra  cho khách hàng, và check lại xem số liệu đã đúng chưa nhé !</b>\n\n"
                     if ck_vao_int_html:
                         reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi đưa cho khách chuyển khoản phí về công ty, và đừng quên kiểm tra bank xem nhận được tiền phí dịch vụ chưa nhé !</b>\n\n"
                     reply_msg += f"🏦 STK: <code><b>{stk_number}</b></code>\n\n"
@@ -816,7 +816,7 @@ def hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, c
 
                     
                     if ck_ra_int_html:
-                        reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản lại cho khách hàng xem số liệu đã đúng chưa nhé!</b>\n\n"
+                        reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản ra  cho khách hàng, và check lại xem số liệu đã đúng chưa nhé !</b>\n\n"
                     if ck_vao_int_html:
                         reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi đưa cho khách chuyển khoản phí về công ty, và đừng quên kiểm tra bank xem nhận được tiền phí dịch vụ chưa nhé !</b>\n\n"
                     reply_msg += f"🏦 STK: <code>{stk_number}</code>\n\n"
