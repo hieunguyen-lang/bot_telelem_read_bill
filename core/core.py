@@ -339,7 +339,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
 
             invoice_key = helper.generate_invoice_key_simple(result, ten_ngan_hang)
             duplicate = redis.is_duplicate(invoice_key)
-            duplicate = False
+            #duplicate = False
             if duplicate:
                 print("[DUPLICATE KEY]"+str(invoice_key))
                 message.reply_text(
@@ -488,20 +488,28 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             sheet = spreadsheet.worksheet("MPOS")
         else:
             sheet = spreadsheet.worksheet("MPOS")
+        
+        hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html)
+
         try:
             _, err = insert_bill_rows(db,list_row_insert_db)
             if err:
                 message.reply_text(f"⚠️ Hóa đơn đã được gửi trước đó: {str(err)}")
+                db.connection.rollback()
                 return
             append_multiple_by_headers(sheet, list_data)
+            for item in list_invoice_key:
+                redis.mark_processed(item)
         except Exception as e:
+            db.connection.rollback()
+            for item in list_invoice_key:
+                redis.remove_invoice(item)
             message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
             return
-        for item in list_invoice_key:
-            redis.mark_processed(item)
-        db.close()
-        hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html)
+        
+        db.connection.commit()
     except Exception as e:
+        db.connection.rollback()
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
 def hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html):
@@ -513,15 +521,14 @@ def hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, 
                     ctk = html.escape(name)
                     qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(ck_ra_int))
 
-                    reply_msg = "@tuantienti1989, @Hieungoc288\n"
-                    reply_msg += f"<b>Bạn vui lòng kiểm tra lại thông tin một lần nữa, và đừng quên kiểm tra bank xem nhận được tiền chưa nhé:</b>\n"
-                    reply_msg += f"🏦 STK: <code><b>{stk_number}</b></code>\n"
-                    reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n"
-                    reply_msg += f"👤 CTK: <b>{ctk}</b>\n"
+                    reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi đưa cho khách chuyển khoản phí về công ty, và đừng quên kiểm tra bank xem nhận được tiền phí dịch vụ chưa nhé !</b>\n\n"
+                    reply_msg += f"🏦 STK: <code><b>{stk_number}</b></code>\n\n"
+                    reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n\n"
+                    reply_msg += f"👤 CTK: <b>{ctk}</b>\n\n"
                     if ck_ra_int_html:
                         reply_msg += f"💰 Tổng số tiền chuyển lại khách: <code><b>{ck_ra_int_html}</b></code> VND\n\n"
                     if ck_vao_int_html:
-                        reply_msg += f"💰 Tổng số tiền nhận lại là: <code><b>{ck_ra_int_html}</b></code> VND\n\n"
+                        reply_msg += f"💰 Tổng số tiền nhận lại là: <code><b>{ck_vao_int_html}</b></code> VND\n\n"
                     reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
                     message.reply_photo(
                             photo=qr_buffer,
@@ -705,13 +712,17 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
         # Gán stk_khach và stk_cty mặc định
         stk_khach = None
         stk_cty = None
+        ck_vao_int_html=None
+        ck_ra_int_html= None
         print("-----------------Gán stk--------------")
         if ck_ra_int == 0 and ck_vao_int !=0:
             stk_khach = ''
             stk_cty = caption.get("stk")
+            ck_vao_int_html= html.escape(str(helper.format_currency_vn(ck_vao_int)))
         elif ck_ra_int != 0 and ck_vao_int ==0:
             stk_khach = caption.get("stk")
             stk_cty = ''
+            ck_ra_int_html= html.escape(str(helper.format_currency_vn(ck_ra_int)))
         elif is_tienmat:
             stk_khach = ''
             stk_cty = "Tiền mặt"
@@ -741,25 +752,31 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
             sheet = spreadsheet.worksheet("MPOS")
         else:
                 sheet = spreadsheet.worksheet("MPOS")
-
+        hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html)
+        
         try:
             _, err = insert_bill_rows(db,list_row_insert_db)
             if err:
                 message.reply_text(f"⚠️ Hóa đơn đã được gửi trước đó: {str(err)}")
+                db.connection.rollback()
                 return
             append_multiple_by_headers(sheet, list_data)
+            for item in list_invoice_key:
+                redis.mark_processed(item)
         except Exception as e:
+            db.connection.rollback()
+            for item in list_invoice_key:
+                redis.remove_invoice(item)
             message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
             return  
-        for item in list_invoice_key:
-            redis.mark_processed(item)
-        db.close()
-        hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess)
+        
+        db.connection.commit()
     except Exception as e:
+        db.connection.rollback()
         print(str(e))
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
-def hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess):
+def hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html):
     if res_mess:
         if caption.get('stk') != '':
                     stk_number, bank, name = helper.tach_stk_nganhang_chutk(caption.get('stk'))
@@ -770,12 +787,14 @@ def hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess):
                         
                     qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(ck_ra_int))
 
-                    reply_msg = "@tuantienti1989, @Hieungoc288\n\n"
-                    reply_msg += f"<b>Bạn vui lòng kiểm tra lại thông tin và chuyển khoản theo nội dung dưới đây:</b>\n"
-                    reply_msg += f"🏦 STK: <code>{stk_number}</code>\n"
-                    reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n"
-                    reply_msg += f"👤 CTK: <b>{ctk}</b>\n"
-                    reply_msg += f"💰 Tổng số tiền chuyển lại khách: <code>{ck_ra_int_html}</code> VND\n\n"
+                    reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản lại cho khách hàng xem số liệu đã đúng chưa nhé!</b>\n"
+                    reply_msg += f"🏦 STK: <code>{stk_number}</code>\n\n"
+                    reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n\n"
+                    reply_msg += f"👤 CTK: <b>{ctk}</b>\n\n"
+                    if ck_ra_int_html:
+                        reply_msg += f"💰 Tổng số tiền chuyển lại khách: <code><b>{ck_ra_int_html}</b></code> VND\n\n"
+                    if ck_vao_int_html:
+                        reply_msg += f"💰 Tổng số tiền nhận lại là: <code><b>{ck_vao_int_html}</b></code> VND\n\n"
                     reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
                     message.reply_photo(
                             photo=qr_buffer,

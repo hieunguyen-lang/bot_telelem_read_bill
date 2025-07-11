@@ -39,6 +39,7 @@ class BankBin:
         "lpb": "970449",
         "maritimebank": "970426",
         "mb": "970422",
+        "mbbank":"970422",
         "militarycommercialjointstockbank": "970422",
         "msb": "970426",
         "nab": "970428",

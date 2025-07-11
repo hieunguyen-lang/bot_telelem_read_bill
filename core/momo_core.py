@@ -259,51 +259,7 @@ def handle_momo_bill(update, context):
         print("ck_ra_caption_int: ",ck_ra_caption_int)
         print("ck_ra_cal: ",int(ck_ra_cal))
         
-        if int(ck_ra_cal) == ck_ra_caption_int:
-            _, err = insert_bill_rows(db,list_row_insert_db)
-            if err:
-                message.reply_text(f"⚠️ Hóa đơn đã được gửi trước đó: {str(err)}")
-                return
-            for item in list_invoice_key:
-                redis.mark_processed_momo(item)
-            db.close()
-            try:
-                if res_mess:
-                    if caption.get('stk') != '':
-                        stk_number, bank, name = helper.tach_stk_nganhang_chutk(caption.get('stk'))
-                        stk_number = html.escape(stk_number)
-                        bank = html.escape(bank)
-                        ctk = html.escape(name)
-
-                        ck_ra_int_html = html.escape(str(helper.format_currency_vn(int(ck_ra_cal))))
-                        qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(int(ck_ra_cal)))
-
-                        reply_msg = "@tuantienti1989, @Hieungoc288\n\n"
-                        reply_msg += f"<b>Bạn vui lòng kiểm tra lại thông tin và chuyển khoản theo nội dung dưới đây:</b>\n"
-                        reply_msg += f"🏦 STK: <code>{stk_number}</code>\n"
-                        reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n"
-                        reply_msg += f"👤 CTK: <b>{ctk}</b>\n"
-                        reply_msg += f"💰 Tổng số tiền chuyển lại khách: <code>{ck_ra_int_html}</code> VND\n\n"
-
-                        reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
-                        message.reply_photo(
-                            photo=qr_buffer,
-                            caption=reply_msg,
-                            parse_mode="HTML"
-                        )
-                    else:
-                        reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
-                        message.reply_text(reply_msg,parse_mode="HTML")
-                else:
-                    reply_msg = "⚠️ Không xử lý được hóa đơn nào."
-
-                    message.reply_text(reply_msg,parse_mode="HTML")
-                
-            except Exception as e:
-                print(str(e))
-                reply_msg = "Hóa đơn đã được lưu vào db!."
-                message.reply_text(reply_msg,parse_mode="HTML")
-        else:
+        if int(ck_ra_cal) != ck_ra_caption_int:
             message.reply_text(
                 "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n"
                 f"👉 Tổng rút: {sum:,}đ\n"
@@ -313,10 +269,61 @@ def handle_momo_bill(update, context):
                 f"Sao chép nhanh: <code>{int(ck_ra_cal)}</code>",
                 parse_mode="HTML"
             )
-            return   
-       
+            return
+        
+        try:
+            handle_sendmess(message, caption, res_mess, ck_ra_cal)
+                
+        except Exception as e:
+            print(str(e))
+            reply_msg = f"Có Lỗi xảy ra trong quá trình xử lí: {str(e)}"
+            message.reply_text(reply_msg,parse_mode="HTML")
+            return
+    
+        _, err = insert_bill_rows(db,list_row_insert_db)
+        if err:
+            db.connection.rollback()
+            message.reply_text(f"⚠️ Hóa đơn đã được gửi trước đó: {str(err)}")
+            return
+        for item in list_invoice_key:
+            redis.mark_processed_momo(item)
+        
+        db.connection.commit()
     except Exception as e:
+        db.connection.rollback()
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
+
+def handle_sendmess(message, caption, res_mess, ck_ra_cal):
+    if res_mess:
+            if caption.get('stk') != '':
+                stk_number, bank, name = helper.tach_stk_nganhang_chutk(caption.get('stk'))
+                stk_number = html.escape(stk_number)
+                bank = html.escape(bank)
+                ctk = html.escape(name)
+
+                ck_ra_int_html = html.escape(str(helper.format_currency_vn(int(ck_ra_cal))))
+                qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(int(ck_ra_cal)))
+
+                reply_msg = "@tuantienti1989, @Hieungoc288\n\n"
+                reply_msg += f"<b>Bạn vui lòng kiểm tra lại thông tin và chuyển khoản theo nội dung dưới đây:</b>\n\n"
+                reply_msg += f"🏦 STK: <code>{stk_number}</code>\n\n"
+                reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n\n"
+                reply_msg += f"👤 CTK: <b>{ctk}</b>\n\n"
+                reply_msg += f"💰 Tổng số tiền chuyển lại khách: <code>{ck_ra_int_html}</code> VND\n\n"
+
+                reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+                message.reply_photo(
+                            photo=qr_buffer,
+                            caption=reply_msg,
+                            parse_mode="HTML"
+                        )
+            else:
+                reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+                message.reply_text(reply_msg,parse_mode="HTML")
+    else:
+            reply_msg = "⚠️ Không xử lý được hóa đơn nào."
+
+            message.reply_text(reply_msg,parse_mode="HTML")
 
 
 def insert_bill_rows(db, list_rows):

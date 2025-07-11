@@ -43,11 +43,11 @@ class MySQLConnector:
         self.ensure_connection()
         try:
             self.cursor.executemany(query, params_list)
-            self.connection.commit()
+            #self.connection.commit()
             return self.cursor.rowcount, None
         except Error as e:
             print("❌ Lỗi khi thực thi nhiều dòng:", e)
-            self.connection.rollback()
+            #self.connection.rollback()
             return None, e
         
     def fetchone(self, query, params=None):
