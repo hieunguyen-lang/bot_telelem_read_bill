@@ -76,6 +76,8 @@ class BankBin:
         "vab": "970427",
         "vbard": "970405",
         "vcb": "970436",
+        "TPB": "970423",
+        "TPBank": "970423",
         "vib": "970441",
         "vibank": "970441",
         "vidpublic": "970439",

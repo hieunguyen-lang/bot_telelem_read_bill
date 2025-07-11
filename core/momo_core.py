@@ -301,7 +301,6 @@ def handle_momo_bill(update, context):
             redis.mark_processed_momo(item)
         try:
             mess,photo = handle_sendmess(caption, res_mess, ck_ra_cal)
-            
             helper.send_long_message(message,mess,photo)
         except Exception as e:
             for item in list_invoice_key:

@@ -513,8 +513,13 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 redis.remove_invoice(item)
             message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
             return
-        
-        db.connection.commit()
+        try:
+            db.connection.commit()
+        except :
+            db.connection.rollback()
+            for item in list_invoice_key:
+                redis.remove_invoice(item)
+            raise 
     except Exception as e:
         
         db.connection.rollback()
@@ -787,7 +792,13 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
             return  
         
         
-        db.connection.commit()
+        try:
+            db.connection.commit()
+        except :
+            db.connection.rollback()
+            for item in list_invoice_key:
+                redis.remove_invoice(item)
+            raise 
     except Exception as e:
         db.connection.rollback()
         print(str(e))
