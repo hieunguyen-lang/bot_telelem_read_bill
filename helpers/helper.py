@@ -135,7 +135,7 @@ def parse_message_rut(text):
 
     patterns = {
         "khach": r"Khach\s*[:\-]\s*\{(.+?)\}",
-        "sdt": r"Sdt\s*[:\-]\s*\{?(\d{9,11})\}?",
+        "sdt": r"Sdt\s*[:\-]\s*\{?\s*(\d{9,11})\s*\}?",
         "rut": r"Rut\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
         "phi": r"Phi\s*[:\-]\s*\{(.+?)\}",
         "tien_phi": r"TienPhi\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
@@ -168,7 +168,7 @@ def parse_message_dao(text):
     # Các pattern tương ứng với định dạng: Trường: {giá trị}
     patterns = {
         "khach": r"Khach\s*[:\-]\s*\{(.+?)\}",
-        "sdt": r"Sdt\s*[:\-]\s*\{?(\d{9,11})\}?",
+        "sdt": r"Sdt\s*[:\-]\s*\{?\s*(\d{9,11})\s*\}?",
         "dao": r"Dao\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
         "phi": r"Phi\s*[:\-]\s*\{(.+?)\}",
         "tien_phi": r"TienPhi\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
