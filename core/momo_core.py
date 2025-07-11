@@ -245,10 +245,11 @@ def handle_momo_bill(update, context):
             sum_tong_phi +=tong_phi_parse
             # Lưu lại kết quả để in ra cuối
             res_mess.append(
-                f"👤 {helper.safe_get(result, 'ten_khach_hang')} - "
-                f"💰 {helper.format_currency_vn(result.get('so_tien')) or '?'} - "
-                f"📄 {helper.safe_get(result, 'ma_giao_dich') or ''} - "
-                f"🧾 {helper.fix_datetime(result.get('thoi_gian')) or ''} - "
+                f"👤 Khách: {helper.safe_get(result, 'ten_khach_hang') or 'N/A'} | "
+                f" Mã KH: {helper.safe_get(result, 'ma_khach_hang') or 'N/A'} | "
+                f" Tiền: {helper.format_currency_vn(result.get('so_tien')) or '?'} | "
+                f" Mã GD: {helper.safe_get(result, 'ma_giao_dich') or 'N/A'} | "
+                f" Thời gian: {helper.fix_datetime(result.get('thoi_gian')) or 'N/A'}"
             )
         percent = helper.parse_percent(caption['phi'])   
         

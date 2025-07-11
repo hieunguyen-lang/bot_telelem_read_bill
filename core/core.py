@@ -410,13 +410,13 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             sum += int(result.get("tong_so_tien") or 0)
             # Lưu lại kết quả để in ra cuối
             res_mess.append(
-                f"🏦 {ten_ngan_hang or 'Không rõ'} - "
-                f"👤 {caption['khach']} - "
-                f"💰 {helper.format_currency_vn(result.get('tong_so_tien')) or '?'} - "
-                f"💰 {result.get('tid') or '?'} - "
-                f"📄 {result.get('so_hoa_don') or ''} - "
-                f"🧾 {result.get('so_lo') or ''} - "
-                f"🖥️ {result.get('ten_may_pos') or ''}"
+                f"🏦 Ngân hàng: {ten_ngan_hang or 'Không rõ'} | "
+                f"👤 Khách: {caption.get('khach', 'N/A')} | "
+                f"💰 Tổng tiền: {helper.format_currency_vn(result.get('tong_so_tien')) or '?'} | "
+                f" TID: {result.get('tid') or '?'} | "
+                f" HĐ: {result.get('so_hoa_don') or 'N/A'} | "
+                f" Lô: {result.get('so_lo') or 'N/A'} | "
+                f" Máy POS: {result.get('ten_may_pos') or 'N/A'}"
             )
             
         if sum >10000000:
@@ -671,13 +671,13 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
 
                 # Lưu lại kết quả để in ra cuối
             res_mess.append(
-                    f"🏦 {ten_ngan_hang or 'MPOS'} - "
-                    f"👤 {caption['khach']} - "
-                    f"💰 {helper.format_currency_vn(result.get('tong_so_tien')) or '?'} - "
-                    f"💰 {result.get('tid') or '?'} - "
-                    f"📄 {result.get('so_hoa_don') or ''} - "
-                    f"🧾 {result.get('so_lo') or ''} - "
-                    f"🖥️ {result.get('ten_may_pos') or ''}"
+                f"🏦 Ngân hàng: {ten_ngan_hang or 'MPOS'} | "
+                f"👤 Khách: {caption.get('khach', 'N/A')} | "
+                f" Tổng tiền: {helper.format_currency_vn(result.get('tong_so_tien')) or '?'} | "
+                f" TID: {result.get('tid') or '?'} | "
+                f" HĐ: {result.get('so_hoa_don') or ''} | "
+                f" Lô: {result.get('so_lo') or ''} | "
+                f" Máy POS: {result.get('ten_may_pos') or ''}"
             )
             
         if sum >10000000:
