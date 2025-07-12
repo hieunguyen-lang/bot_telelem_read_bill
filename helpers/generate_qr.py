@@ -7,7 +7,7 @@ from helpers.bankpin import BankBin
 def normalize_bank_name(name: str) -> str:
     return unidecode(name).lower().replace(" ", "").replace("-", "")
 
-def generate_qr_binary(account_no: str, bank_name: str, amount_str: str,noi_dung= "Chuyển khoản", new_width_ratio=2.0) -> BytesIO:
+def generate_qr_binary(account_no: str, bank_name: str, amount_str: str,noi_dung= "Chuyen khoan", new_width_ratio=2.0) -> BytesIO:
     """
     Tạo QR code dạng BytesIO (không lưu file), với canvas rộng hơn.
     """
