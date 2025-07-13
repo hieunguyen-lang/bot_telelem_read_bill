@@ -426,7 +426,8 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 None,  # stk_khach
                 str(helper.parse_percent(caption.get('phi', ''))),
                 invoice_key,
-                ma_chuyen_khoan
+                ma_chuyen_khoan,
+                timestamp.replace(day=int(caption.get('lich_canh_bao')))
             ]
         
             data = {
@@ -750,7 +751,8 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                 None,  # stk_khach
                 str(helper.parse_percent(caption.get('phi', ''))),
                 invoice_key,
-                ma_chuyen_khoan
+                ma_chuyen_khoan,
+                timestamp.replace(day=int(caption.get('lich_canh_bao')))
             ]
               # Ghi vào MySQL
             
@@ -975,8 +977,9 @@ def insert_bill_rows(db, list_rows):
             stk_cty,
             phan_tram_phi,
             key_redis,
-            ma_chuyen_khoan
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ma_chuyen_khoan,
+            lich_canh_bao_datetime
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     rowcount, err = db.executemany(query, list_rows)
     return rowcount, err
