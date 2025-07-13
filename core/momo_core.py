@@ -205,7 +205,7 @@ def handle_momo_bill(update, context):
         batch_id =str(uuid.uuid4())
         count_img=0
         seen_keys = set()
-        ma_chuyen_khoan = str(uuid.uuid4())
+        ma_chuyen_khoan = helper.base62_uuid4()
         for img_b64 in image_b64_list:
             count_img += 1
             result = analyzer.analyze_bill_momo_gpt(img_b64)    
