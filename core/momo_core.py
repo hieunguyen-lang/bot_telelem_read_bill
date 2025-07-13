@@ -359,10 +359,11 @@ def handle_sendmess( caption, res_mess, ck_ra_cal,ma_chuyen_khoan):
                 ck_ra_int_html = html.escape(str(helper.format_currency_vn(int(ck_ra_cal))))
                 qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(int(ck_ra_cal)),ma_chuyen_khoan)
 
-                reply_msg = f"<b>Bạn vui lòng kiểm tra lại thông tin và chuyển khoản theo nội dung dưới đây:</b>\n\n"
+                reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản ra  cho khách hàng, và check lại xem số liệu đã đúng chưa nhé !:</b>\n\n"
                 reply_msg += f"🏦 STK: <code>{stk_number}</code>\n\n"
-                reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n\n"
-                reply_msg += f"👤 CTK: <b>{ctk}</b>\n\n"
+                reply_msg += f"💳 Ngân hàng: <code><b>{bank}</b></code>\n\n"
+                reply_msg += f"👤 CTK:  <code><b>{ctk}</b> </code>\n\n"
+                reply_msg += f"📝 Nội dung:  <code><b>{ma_chuyen_khoan}</b> </code>\n\n"
                 reply_msg += f"💰 Tổng số tiền chuyển lại khách: <code>{ck_ra_int_html}</code> VND\n\n"
 
                 reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
