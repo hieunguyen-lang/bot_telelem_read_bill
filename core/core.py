@@ -325,10 +325,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
     image_b64_list = context.user_data.get("image_data", [])
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
     print(f"Caption: {caption}")
-    ck_vao_int = helper.parse_currency_input_int(caption.get("ck_vao"))
-    rut_thieu = helper.parse_currency_input_int(caption.get("rut_thieu"))
-    ck_ra_int = helper.parse_currency_input_int(caption.get("ck_ra"))
-    rut_thua = helper.parse_currency_input_int(caption.get("rut_thua"))
+    
     
     try:
         if not image_b64_list:
@@ -344,10 +341,14 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         list_invoice_key = []
         sum=0
         ten_ngan_hang=None
-        
+        ck_vao_int = helper.parse_currency_input_int(caption.get("ck_vao"))
+        rut_thieu = helper.parse_currency_input_int(caption.get("rut_thieu"))
+        ck_ra_int = helper.parse_currency_input_int(caption.get("ck_ra"))
+        rut_thua = helper.parse_currency_input_int(caption.get("rut_thua"))
         batch_id =str(uuid.uuid4())
         count_img =0
         ma_chuyen_khoan = helper.base62_uuid4()
+        percent = helper.parse_percent(caption.get('phi', '0'))
         for img_b64 in image_b64_list:
             count_img += 1
             if helper.is_bill_ket_toan_related(caption.get("note")) ==False:
@@ -399,7 +400,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                     parse_mode="Markdown"
                 )
                 return
-            
+            tong_so_tien = int(result.get("tong_so_tien"))
             row = [
                 timestamp,
                 full_name,
@@ -409,7 +410,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 ten_ngan_hang,
                 result.get("ngay_giao_dich"),
                 result.get("gio_giao_dich"),
-                result.get("tong_so_tien"),
+                tong_so_tien,
                 result.get("so_the"),
                 result.get("tid"),
                 result.get("mid"),
@@ -417,15 +418,15 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("so_hoa_don"),    
                 result.get("ten_may_pos"),
                 caption.get('lich_canh_bao'),
-                0,
+                int(percent * tong_so_tien),
                 batch_id,
                 caption.get('note'),
                 helper.contains_khach_moi(caption.get('note', '')),
-                str(ck_ra_int),
-                str(ck_vao_int),
+                ck_ra_int,
+                ck_vao_int,
                 None,  # stk_cty
                 None,  # stk_khach
-                str(helper.parse_percent(caption.get('phi', ''))),
+                str(percent),
                 invoice_key,
                 ma_chuyen_khoan,
                 date_send.replace(day=int(caption.get('lich_canh_bao')))
@@ -464,7 +465,6 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             )
             
         if sum >10000000:
-            percent = helper.parse_percent(caption['phi'])
             cal_phi_dich_vu = int(sum * percent)
             print("sum: ",sum)    
             print("percent: ",percent)
@@ -501,9 +501,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                     except Exception as e:
                         print("Lỗi khi gửi message:", e)
                     return  
-            for row in list_row_insert_db:
-                    # Giả sử cột 'tien_phi' nằm ở index 16
-                row[16] = cal_phi_dich_vu
+           
                     
         else:
             if rut_thieu and ck_vao_int:
@@ -534,9 +532,16 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                     except Exception as e:
                         print("Lỗi khi gửi message:", e)
                     return
-            for row in list_row_insert_db:
-                # Giả sử cột 'tien_phi' nằm ở index 16
-                row[16] = 200000  
+            total_phi = 200000
+            so_dong = len(list_row_insert_db)
+
+            if so_dong > 0:
+                phi_moi_dong = total_phi // so_dong  # chia đều
+                du = total_phi % so_dong             # phần dư nếu có
+
+                for i, row in enumerate(list_row_insert_db):
+                    # Thêm 1 đơn vị dư cho những dòng đầu tiên
+                    row[16] = phi_moi_dong + (1 if i < du else 0) 
         is_tienmat  = helper.is_cash_related(caption['note'])    
         # Gán stk_khach và stk_cty mặc định
         stk_khach = None
@@ -675,6 +680,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
         batch_id = str(uuid.uuid4())
         ma_chuyen_khoan = helper.base62_uuid4()
         count_img=0
+        percent = helper.parse_percent(caption.get('phi', '0'))
         for img_b64 in image_b64_list:
             count_img +=1
             if helper.is_bill_ket_toan_related(caption.get("note")) ==False:        
@@ -726,6 +732,8 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                     parse_mode="Markdown"
                 )
                 return
+            tong_so_tien = int(result.get("tong_so_tien"))
+            
             row = [
                 timestamp,
                 full_name,
@@ -735,7 +743,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                 ten_ngan_hang,
                 result.get("ngay_giao_dich"),
                 result.get("gio_giao_dich"),
-                result.get("tong_so_tien"),
+                tong_so_tien,
                 result.get("so_the"),
                 result.get("tid"),
                 result.get("mid"),
@@ -743,15 +751,15 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                 result.get("so_hoa_don"),
                 result.get("ten_may_pos"),
                 caption.get('lich_canh_bao'),
-                0,
+                int(percent * tong_so_tien),
                 batch_id,
                 caption.get('note'),
                 helper.contains_khach_moi(caption.get('note', '')),
-                str(ck_ra_int),
-                str(ck_vao_int),
+                ck_ra_int,
+                ck_vao_int,
                 None,  # stk_cty
                 None,  # stk_khach
-                str(helper.parse_percent(caption.get('phi', ''))),
+                str(percent),
                 invoice_key,
                 ma_chuyen_khoan,
                 date_send.replace(day=int(caption.get('lich_canh_bao')))
@@ -793,8 +801,6 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
             )
             
         if sum >10000000:
-           
-            percent = helper.parse_percent(caption['phi'])
             cal_phi_dich_vu = int(sum * percent) 
             cal_ck_ra = int(sum - cal_phi_dich_vu)
             print("sum: ",sum)    
@@ -814,8 +820,6 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                 except Exception as e:
                     print("Lỗi khi gửi message:", e)
                 return
-            for row in list_row_insert_db:
-                row[16] = cal_phi_dich_vu 
         else:
             cal_ck_ra = int(sum - 200000)
             if cal_ck_ra !=ck_ra_int:
@@ -830,9 +834,16 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                     print("Lỗi khi gửi message:", e)
                 return
             
-            for row in list_row_insert_db:
-                # Giả sử cột 'tien_phi' nằm ở index 16
-                row[16] = 200000 
+            total_phi = 200000
+            so_dong = len(list_row_insert_db)
+
+            if so_dong > 0:
+                phi_moi_dong = total_phi // so_dong  # chia đều
+                du = total_phi % so_dong             # phần dư nếu có
+
+                for i, row in enumerate(list_row_insert_db):
+                    # Thêm 1 đơn vị dư cho những dòng đầu tiên
+                    row[16] = phi_moi_dong + (1 if i < du else 0) 
 
         is_tienmat  = helper.is_cash_related(caption['note'])
         # Gán stk_khach và stk_cty mặc định
@@ -969,7 +980,7 @@ def insert_bill_rows(db, list_rows):
             so_hoa_don,
             ten_may_pos,
             lich_canh_bao,
-            tien_phi,
+            phi_per_bill,
             batch_id,
             caption_goc,
             khach_moi,
