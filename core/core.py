@@ -808,7 +808,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                         f"👉 Tổng rút: {sum:,}đ\n\n"
                         f"👉 Phí phần trăm: {percent * 100:.2f}%\n\n"
                         f"👉 Phí đúng phải là: <code>{cal_phi_dich_vu:,}</code>đ\n\n"
-                        f"👉 ck_ra đúng phải là {sum:,} - {cal_phi_dich_vu}: <code>{int(cal_ck_ra):,}</code>đ\n\n",
+                        f"👉 ck_ra đúng phải là {sum:,} - {cal_phi_dich_vu:,}: <code>{int(cal_ck_ra):,}</code>đ\n\n",
                         parse_mode="HTML"
                     )
                 except Exception as e:
