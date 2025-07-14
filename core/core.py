@@ -321,6 +321,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
     message = update.message
     full_name = message.from_user.username
     timestamp = message.date.strftime("%Y-%m-%d %H:%M:%S")
+    date_send = message.date
     image_b64_list = context.user_data.get("image_data", [])
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
     print(f"Caption: {caption}")
@@ -427,7 +428,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 str(helper.parse_percent(caption.get('phi', ''))),
                 invoice_key,
                 ma_chuyen_khoan,
-                timestamp.replace(day=int(caption.get('lich_canh_bao')))
+                date_send.replace(day=int(caption.get('lich_canh_bao')))
             ]
         
             data = {
@@ -650,6 +651,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
     message = update.message
     full_name = message.from_user.username
     timestamp = message.date.strftime("%Y-%m-%d %H:%M:%S")
+    date_send = message.date
     image_b64_list = context.user_data.get("image_data", [])
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
     print(caption)
@@ -752,7 +754,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                 str(helper.parse_percent(caption.get('phi', ''))),
                 invoice_key,
                 ma_chuyen_khoan,
-                timestamp.replace(day=int(caption.get('lich_canh_bao')))
+                date_send.replace(day=int(caption.get('lich_canh_bao')))
             ]
               # Ghi vào MySQL
             
