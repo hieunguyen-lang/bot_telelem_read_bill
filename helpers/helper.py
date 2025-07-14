@@ -2,6 +2,7 @@ import base64
 import re
 import unicodedata
 import html
+import uuid
 from unidecode import unidecode
 from rapidfuzz import fuzz
 from io import BytesIO
@@ -176,6 +177,8 @@ def parse_message_dao(text):
         "lich_canh_bao": r"LichCanhBao\s*[:\-]\s*\{(\d+)\}",
         "ck_vao": r"ck[_\s]?vao\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
         "ck_ra": r"ck[_\s]?ra\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+        "rut_thieu": r"rut[_\s]?thieu\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+        "rut_thua": r"rut[_\s]?thua\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
         "stk": r"Stk\s*[:\-]\s*(?:\{)?([^\n\}]+)(?:\})?",
         "note": r"Note\s*[:\-]\s*\{(.+?)\}"
     }
@@ -481,3 +484,13 @@ def send_long_message(message, full_text, photo=None, max_len=1024):
     # Gửi phần còn lại
     for part in chunks:
         message.reply_text(part, parse_mode="HTML")
+
+
+def base62_uuid4() -> str:
+    # Tạo UUID4
+    u = uuid.uuid4()
+    # Lấy dạng bytes
+    b = u.bytes
+    # Mã hoá base64 URL-safe, bỏ dấu `=`
+    b62 = base64.urlsafe_b64encode(b).rstrip(b'=').decode('ascii')
+    return b62

@@ -89,7 +89,7 @@ def validate_caption(update, chat_id, caption):
             "`Tong: {40.800M}`\n"
             "`LichCanhBao: {15}`\n"
             "`ck_vao: {3.058M}`\n"
-            "`ck_ra: {0}`\n"
+            "`rut_thieu: {0}`\n"
             "`Stk: VPBANK - 0123456789 - Nguyễn Văn A`\n"
             "`Note: {Khách chuyển khoản hộ em}`"
         )
@@ -100,7 +100,7 @@ def validate_caption(update, chat_id, caption):
 
     # Check theo nhóm
     if str(chat_id) == GROUP_DAO_ID:
-        required_keys = ["khach", "sdt", "dao", "phi", "tien_phi", "tong", "lich_canh_bao", "ck_vao", "ck_ra", "stk", "note"]
+        required_keys = ["khach", "sdt", "dao", "phi", "lich_canh_bao", "stk", "note"]
     
         present_dict = helper.parse_message_dao(caption)
         print("present_dict:",present_dict)
@@ -111,22 +111,57 @@ def validate_caption(update, chat_id, caption):
             errmess = send_format_guide(missing_keys)
             return None, errmess
 
-        parsed = helper.parse_message_dao(caption)
-        if 'dao' not in parsed:
-            
-            return None, "❌ thiếu key 'dao'"
-        #print(int(present_dict.get("ck_vao")))
-        if helper.parse_currency_input_int(present_dict.get("ck_ra")) == 0 and helper.parse_currency_input_int(present_dict.get("ck_vao"))==0:
-            return None, "❌  ck_ vao và ck_ ra không thể cùng bằng: 0"
         
+        if 'dao' not in present_dict:
+            return None, "❌ thiếu key 'dao'"
         validate, err  = helper.validate_stk_nganhang_chutk(present_dict.get('stk'))
         
         if  validate == False:
             return None, err
-        return parsed, None
+        has_ck_vao = "ck_vao" in present_dict
+        has_rut_thieu = "rut_thieu" in present_dict
+        has_ck_ra = "ck_ra" in present_dict
+        has_rut_thua = "rut_thua" in present_dict
+
+
+         # Nếu cả 2 loại cùng có → lỗi
+        if (has_ck_vao or has_rut_thieu) and (has_ck_ra or has_rut_thua):
+            return None,"❌ Lỗi: không được vừa có cả rút thiếu(ck_vao,rut_thieu) và rút thừa(ck_ra,rut_thua)."
+        # Nếu có dấu hiệu rút thiếu
+        if has_ck_vao or has_rut_thieu:
+            if not (has_ck_vao and has_rut_thieu):
+                return None,(
+                    "❌ Lỗi: Để xử lý rút thiếu, bạn cần nhập **cả 2 trường**: `ck_vao` và `rut_thieu`. "
+                    "Hiện tại dữ liệu đang thiếu 1 trong 2."
+                )
+            if helper.parse_currency_input_int(present_dict.get("ck_vao")) == 0 and helper.parse_currency_input_int(present_dict.get("rut_thieu"))==0:
+                return None, "❌  ck_ vao và rut_ thieu không thể cùng bằng: 0"
+            # ✅ Đã hợp lệ rút thiếu, nhưng lại có thêm `ck_ra` hoặc `rut_thua`
+            if has_ck_ra or has_rut_thua:
+                return None, (
+                    "❌ Lỗi: Đã nhập rút thiếu (`ck_vao`, `rut_thieu`) nhưng lại có thêm trường rút thừa(`ck_ra`, `rut_thua`)."
+                )
+            return present_dict, None
+        # Nếu có dấu hiệu rút thừa
+        if has_ck_ra or has_rut_thua:
+            if not (has_ck_ra and has_rut_thua):
+                return None,(
+                    "❌ Lỗi: Để xử lý rút thừa, bạn cần nhập **cả 2 trường**: `ck_ra` và `rut_thua`. "
+                    "Hiện tại dữ liệu đang thiếu 1 trong 2."
+                )
+            elif helper.parse_currency_input_int(present_dict.get("ck_ra")) == 0 and helper.parse_currency_input_int(present_dict.get("rut_thua"))==0:
+                return None, "❌  ck_ vao và rut_ thieu không thể cùng bằng: 0"
+            # ✅ Đã hợp lệ rút thừa, nhưng lại có thêm `ck_vao` hoặc `rut_thieu`
+            if has_ck_vao or has_rut_thieu:
+                return None, (
+                    "❌ Lỗi: Đã nhập rút thừa (`ck_ra`, `rut_thua`) nhưng lại có thêm trường rút thiếu(`ck_vao`, `rut_thieu`)."
+                )
+            return present_dict, None
+        
+        return None, "❌ Lỗi: Không tìm thấy thông tin giao dịch hợp lệ."
 
     elif str(chat_id) == GROUP_RUT_ID:  
-        required_keys = ["khach", "sdt", "rut", "phi", "tien_phi", "tong", "lich_canh_bao", "ck_vao", "ck_ra", "stk", "note"]
+        required_keys = ["khach", "sdt", "rut", "phi", "tong", "lich_canh_bao", "ck_vao", "ck_ra", "stk", "note"]
 
         present_dict = helper.parse_message_rut(caption)
         print("present_dict:",present_dict)
@@ -290,7 +325,10 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
     print(f"Caption: {caption}")
     ck_vao_int = helper.parse_currency_input_int(caption.get("ck_vao"))
+    rut_thieu = helper.parse_currency_input_int(caption.get("rut_thieu"))
     ck_ra_int = helper.parse_currency_input_int(caption.get("ck_ra"))
+    rut_thua = helper.parse_currency_input_int(caption.get("rut_thua"))
+    
     try:
         if not image_b64_list:
             message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
@@ -305,9 +343,10 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         list_invoice_key = []
         sum=0
         ten_ngan_hang=None
-        tien_phi_int =helper.parse_currency_input_int(caption['tien_phi'])
+        
         batch_id =str(uuid.uuid4())
         count_img =0
+        ma_chuyen_khoan = helper.base62_uuid4()
         for img_b64 in image_b64_list:
             count_img += 1
             if helper.is_bill_ket_toan_related(caption.get("note")) ==False:
@@ -377,7 +416,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 result.get("so_hoa_don"),    
                 result.get("ten_may_pos"),
                 caption.get('lich_canh_bao'),
-                str(tien_phi_int),
+                0,
                 batch_id,
                 caption.get('note'),
                 helper.contains_khach_moi(caption.get('note', '')),
@@ -386,7 +425,9 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 None,  # stk_cty
                 None,  # stk_khach
                 str(helper.parse_percent(caption.get('phi', ''))),
-                invoice_key
+                invoice_key,
+                ma_chuyen_khoan,
+                timestamp.replace(day=int(caption.get('lich_canh_bao')))
             ]
         
             data = {
@@ -403,7 +444,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                 "SỐ HÓA ĐƠN": result.get("so_hoa_don"),
                 "GIỜ GIAO DỊCH": result.get("gio_giao_dich"),
                 "TÊN POS": result.get("ten_may_pos"),
-                "PHÍ DV": tien_phi_int,
+                "PHÍ DV": 0,
             }
             
             list_data.append(data)
@@ -422,29 +463,79 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             )
             
         if sum >10000000:
-            print(caption)
             percent = helper.parse_percent(caption['phi'])
-            
-            cal_phi_dich_vu = sum * percent
-            print("sum >10Tr")
+            cal_phi_dich_vu = int(sum * percent)
             print("sum: ",sum)    
             print("percent: ",percent)
             print("cal_phi_dich_vu: ",cal_phi_dich_vu)
-            if int(cal_phi_dich_vu) != tien_phi_int:
-                cal_phi_dich_vu_html= html.escape(str(int(cal_phi_dich_vu)))
-                message.reply_text(
-                    "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
-                    f"👉 Tổng rút: {sum:,}đ\n"
-                    f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
-                    f"👉 Phí đúng phải là: {int(cal_phi_dich_vu):,}đ\n\n"
-                    f"Sao chép nhanh: <code>{cal_phi_dich_vu_html}</code>",
-                    parse_mode="HTML"
-                )
-                return   
+            if rut_thieu and ck_vao_int:
+                cal_ck_vao = int(cal_phi_dich_vu + rut_thieu)
+                if cal_ck_vao != ck_vao_int:
+                    try:
+                        message.reply_text(
+                            "❗ Có vẻ bạn tính sai ck_vao rồi 😅\n\n"
+                            f"👉 Tổng Đáo: {sum:,}đ\n\n"
+                            f"👉 Phí phần trăm: {percent * 100:.2f}%\n\n"
+                            f"👉 Phí đúng phải là: <code>{cal_phi_dich_vu:,}</code>đ\n\n"
+                            f"👉 Rút thiếu là: <code>{rut_thieu:,}</code>đ\n\n"
+                            f"👉 ck_vao đúng phải là {sum:,} - {cal_phi_dich_vu:,}: <code>{int(cal_ck_vao):,}</code>đ\n\n",
+                            parse_mode="HTML"
+                        )
+                    except Exception as e:
+                        print("Lỗi khi gửi message:", e)
+                    return   
+            elif rut_thua and ck_ra_int:  
+                cal_ck_ra = int(rut_thua - cal_phi_dich_vu)
+                if cal_ck_ra != ck_ra_int:
+                    try:
+                        message.reply_text(
+                            "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n\n"
+                            f"👉 Tổng Đáo: {sum:,}đ\n\n"
+                            f"👉 Phí phần trăm: {percent * 100:.2f}%\n\n"
+                            f"👉 Phí đúng phải là: <code>{cal_phi_dich_vu:,}</code>đ\n\n"
+                            f"👉 Rút thừa là: <code>{rut_thua:,}</code>đ\n\n"
+                            f"👉 ck_ra đúng phải là {rut_thua:,}đ - {cal_phi_dich_vu:,}đ: <code>{int(cal_ck_ra):,}</code>đ\n\n",
+                            parse_mode="HTML"
+                        )
+                    except Exception as e:
+                        print("Lỗi khi gửi message:", e)
+                    return  
+            for row in list_row_insert_db:
+                    # Giả sử cột 'tien_phi' nằm ở index 16
+                row[16] = cal_phi_dich_vu
+                    
         else:
+            if rut_thieu and ck_vao_int:
+                cal_ck_vao = int(200000 + rut_thieu)
+                if cal_ck_vao != ck_vao_int:
+                    try:
+                        message.reply_text(
+                            "❗ Có vẻ bạn tính sai ck_vao rồi 😅\n\n"
+                            f"👉 Tổng rút: {sum:,}đ dưới 10M phí = 200,000đ\n\n"
+                            f"👉 Rút thiếu là: <code>{rut_thieu:,}</code>đ\n\n"
+                            f"👉 ck_vao đúng phải là 200,000đ + {rut_thieu:,} = <code>{int(cal_ck_vao):,}</code>đ\n\n",
+                            parse_mode="HTML"
+                        )
+                    except Exception as e:
+                        print("Lỗi khi gửi message:", e)
+                    return 
+            if rut_thua and ck_ra_int:
+                cal_ck_ra = int(rut_thua - 200000)
+                if cal_ck_ra != ck_ra_int:
+                    try:
+                        message.reply_text(
+                            "❗ Có vẻ bạn tính sai ck_vao rồi 😅\n\n"
+                            f"👉 Tổng rút: {sum:,}đ dưới 10M phí = 200,000đ\n\n"
+                            f"👉 Rút thừa là: <code>{rut_thua:,}</code>đ\n\n"
+                            f"👉 ck_ra đúng phải là {rut_thua:,}đ - 200,200đ = <code>{int(cal_ck_ra):,}</code>đ\n\n",
+                            parse_mode="HTML"
+                        )
+                    except Exception as e:
+                        print("Lỗi khi gửi message:", e)
+                    return
             for row in list_row_insert_db:
                 # Giả sử cột 'tien_phi' nằm ở index 16
-                row[16] = tien_phi_int  
+                row[16] = 200000  
         is_tienmat  = helper.is_cash_related(caption['note'])    
         # Gán stk_khach và stk_cty mặc định
         stk_khach = None
@@ -504,7 +595,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
               reply_msg = "⚠️ Không xử lý được hóa đơn nào."
               message.reply_text(reply_msg)
               return  
-            hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html)
+            hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html,ma_chuyen_khoan)
             for item in list_invoice_key:
                 redis.mark_processed(item)
         except Exception as e:
@@ -525,21 +616,22 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         db.connection.rollback()
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
-def hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html):
+def hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html,ma_chuyen_khoan):
     if caption.get('stk') != '':
                     stk_number, bank, name = helper.tach_stk_nganhang_chutk(caption.get('stk'))
                     stk_number = html.escape(stk_number)
                     bank = html.escape(bank)
                     ctk = html.escape(name)
-                    qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(ck_ra_int))
+                    qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(ck_ra_int),ma_chuyen_khoan)
 
                     if ck_ra_int_html:
-                        reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản lại cho khách hàng xem số liệu đã đúng chưa nhé!</b>\n\n"
+                        reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản ra  cho khách hàng, và check lại xem số liệu đã đúng chưa nhé !</b>\n\n"
                     if ck_vao_int_html:
                         reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi đưa cho khách chuyển khoản phí về công ty, và đừng quên kiểm tra bank xem nhận được tiền phí dịch vụ chưa nhé !</b>\n\n"
                     reply_msg += f"🏦 STK: <code><b>{stk_number}</b></code>\n\n"
                     reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n\n"
                     reply_msg += f"👤 CTK: <b>{ctk}</b>\n\n"
+                    reply_msg += f"📝 Nội dung:  <code><b>{ma_chuyen_khoan}</b> </code>\n\n"
                     if ck_ra_int_html:
                         reply_msg += f"💰 Tổng số tiền chuyển lại khách: <code><b>{ck_ra_int_html}</b></code> VND\n\n"
                     if ck_vao_int_html:
@@ -578,8 +670,8 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
 
         sum= 0
         ten_ngan_hang=None
-        tien_phi_int =helper.parse_currency_input_int(caption['tien_phi'])
         batch_id = str(uuid.uuid4())
+        ma_chuyen_khoan = helper.base62_uuid4()
         count_img=0
         for img_b64 in image_b64_list:
             count_img +=1
@@ -649,7 +741,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                 result.get("so_hoa_don"),
                 result.get("ten_may_pos"),
                 caption.get('lich_canh_bao'),
-                str(tien_phi_int),
+                0,
                 batch_id,
                 caption.get('note'),
                 helper.contains_khach_moi(caption.get('note', '')),
@@ -658,7 +750,9 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                 None,  # stk_cty
                 None,  # stk_khach
                 str(helper.parse_percent(caption.get('phi', ''))),
-                invoice_key
+                invoice_key,
+                ma_chuyen_khoan,
+                timestamp.replace(day=int(caption.get('lich_canh_bao')))
             ]
               # Ghi vào MySQL
             
@@ -676,7 +770,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
                 "SỐ HÓA ĐƠN": result.get("so_hoa_don"),
                 "GIỜ GIAO DỊCH": result.get("gio_giao_dich"),
                 "TÊN POS": result.get("ten_may_pos"),
-                "PHÍ DV": tien_phi_int,
+                "PHÍ DV": 0,
             }
             
             
@@ -699,31 +793,45 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
         if sum >10000000:
            
             percent = helper.parse_percent(caption['phi'])
-            cal_phi_dich_vu = sum * percent 
-            print("sum >10Tr")
+            cal_phi_dich_vu = int(sum * percent) 
+            cal_ck_ra = int(sum - cal_phi_dich_vu)
             print("sum: ",sum)    
             print("percent: ",percent)
-            print("cal_phi_dich_vu: ",int(cal_phi_dich_vu))  
-            print("tien_phi_int: ",tien_phi_int)
-            if int(cal_phi_dich_vu) != tien_phi_int:
+            print("cal_phi_dich_vu: ",cal_phi_dich_vu)  
+            
+            if cal_ck_ra !=ck_ra_int:
                 try:
-                    cal_phi_dich_vu_html= html.escape(str(int(cal_phi_dich_vu)))
                     message.reply_text(
-                        "❗ Có vẻ bạn tính sai phí dịch vụ rồi 😅\n"
-                        f"👉 Tổng rút: {sum:,}đ\n"
-                        f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
-                        f"👉 Phí đúng phải là: {int(cal_phi_dich_vu):,}đ\n\n"
-                        f"Sao chép nhanh: /<code>{cal_phi_dich_vu_html}</code>",
+                        "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n\n"
+                        f"👉 Tổng rút: {sum:,}đ\n\n"
+                        f"👉 Phí phần trăm: {percent * 100:.2f}%\n\n"
+                        f"👉 Phí đúng phải là: <code>{cal_phi_dich_vu:,}</code>đ\n\n"
+                        f"👉 ck_ra đúng phải là {sum:,} - {cal_phi_dich_vu}: <code>{int(cal_ck_ra):,}</code>đ\n\n",
                         parse_mode="HTML"
                     )
                 except Exception as e:
                     print("Lỗi khi gửi message:", e)
                 return
+            for row in list_row_insert_db:
+                row[16] = cal_phi_dich_vu 
         else:
+            cal_ck_ra = int(sum - 200000)
+            if cal_ck_ra !=ck_ra_int:
+                try:
+                    message.reply_text(
+                        "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n\n"
+                        f"👉 Tổng rút: {sum:,}đ dưới 10M phí = 200,000đ\n\n"
+                        f"👉 ck_ra đúng phải là {sum:,} -200,000đ = <code>{int(cal_ck_ra):,}</code>đ\n\n",
+                        parse_mode="HTML"
+                    )
+                except Exception as e:
+                    print("Lỗi khi gửi message:", e)
+                return
             
             for row in list_row_insert_db:
                 # Giả sử cột 'tien_phi' nằm ở index 16
-                row[16] = tien_phi_int 
+                row[16] = 200000 
+
         is_tienmat  = helper.is_cash_related(caption['note'])
         # Gán stk_khach và stk_cty mặc định
         stk_khach = None
@@ -781,7 +889,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
               reply_msg = "⚠️ Không xử lý được hóa đơn nào."
               message.reply_text(reply_msg)
               return 
-            hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html)
+            hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html,ma_chuyen_khoan)
             for item in list_invoice_key:
                 redis.mark_processed(item)
         except Exception as e:
@@ -804,7 +912,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
         print(str(e))
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
-def hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html):
+def hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html,ma_chuyen_khoan):
     if caption.get('stk') != '':
                     stk_number, bank, name = helper.tach_stk_nganhang_chutk(caption.get('stk'))
                     stk_number = html.escape(stk_number)
@@ -812,16 +920,17 @@ def hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, c
                     ctk = html.escape(name)
                     ck_ra_int_html= html.escape(str(helper.format_currency_vn(ck_ra_int)))
                         
-                    qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(ck_ra_int))
+                    qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(ck_ra_int),ma_chuyen_khoan)
 
                     
                     if ck_ra_int_html:
-                        reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản lại cho khách hàng xem số liệu đã đúng chưa nhé!</b>\n\n"
+                        reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản ra  cho khách hàng, và check lại xem số liệu đã đúng chưa nhé !</b>\n\n"
                     if ck_vao_int_html:
                         reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi đưa cho khách chuyển khoản phí về công ty, và đừng quên kiểm tra bank xem nhận được tiền phí dịch vụ chưa nhé !</b>\n\n"
                     reply_msg += f"🏦 STK: <code>{stk_number}</code>\n\n"
                     reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n\n"
                     reply_msg += f"👤 CTK: <b>{ctk}</b>\n\n"
+                    reply_msg += f"📝 Nội dung:  <code><b>{ma_chuyen_khoan}</b> </code>\n\n"
                     if ck_ra_int_html:
                         reply_msg += f"💰 Tổng số tiền chuyển lại khách: <code><b>{ck_ra_int_html}</b></code> VND\n\n"
                     if ck_vao_int_html:
@@ -867,8 +976,10 @@ def insert_bill_rows(db, list_rows):
             stk_khach,
             stk_cty,
             phan_tram_phi,
-            key_redis
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            key_redis,
+            ma_chuyen_khoan,
+            lich_canh_bao_datetime
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     rowcount, err = db.executemany(query, list_rows)
     return rowcount, err
