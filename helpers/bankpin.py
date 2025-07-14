@@ -99,6 +99,11 @@ class BankBin:
         "vrb": "970421",
         "whhn": "970457",
         "wooribankhanoi": "970457",
+        "kbank": "668888",
+        "dbsbank": "796500",
+        "coopbank": "970446",
+        "ibkhcm": "970456"
+        
     }
     
     @staticmethod
