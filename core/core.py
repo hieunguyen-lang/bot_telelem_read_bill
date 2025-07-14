@@ -601,7 +601,8 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
               reply_msg = "⚠️ Không xử lý được hóa đơn nào."
               message.reply_text(reply_msg)
               return  
-            hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html,ma_chuyen_khoan)
+            mess,photo = hanlde_sendmess_dao( caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html,ma_chuyen_khoan)
+            helper.send_long_message(message,mess,photo)
             for item in list_invoice_key:
                 redis.mark_processed(item)
         except Exception as e:
@@ -622,7 +623,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         db.connection.rollback()
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
-def hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html,ma_chuyen_khoan):
+def hanlde_sendmess_dao( caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_int_html,ma_chuyen_khoan):
     if caption.get('stk') != '':
                     stk_number, bank, name = helper.tach_stk_nganhang_chutk(caption.get('stk'))
                     stk_number = html.escape(stk_number)
@@ -643,14 +644,10 @@ def hanlde_sendmess_dao(message, caption, ck_ra_int, res_mess, ck_vao_int_html, 
                     if ck_vao_int_html:
                         reply_msg += f"💰 Tổng số tiền nhận lại là: <code><b>{ck_vao_int_html}</b></code> VND\n\n"
                     reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
-                    message.reply_photo(
-                            photo=qr_buffer,
-                            caption=reply_msg,
-                            parse_mode="HTML"
-                        )
+                    return  reply_msg,qr_buffer
     else:
-            reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
-            message.reply_text(reply_msg,parse_mode="HTML")
+        reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
+        return reply_msg,None
 
 def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
     message = update.message
@@ -902,7 +899,8 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
               reply_msg = "⚠️ Không xử lý được hóa đơn nào."
               message.reply_text(reply_msg)
               return 
-            hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html,ma_chuyen_khoan)
+            mess,photo=hanlde_sendmess_rut( caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html,ma_chuyen_khoan)
+            helper.send_long_message(message,mess,photo)
             for item in list_invoice_key:
                 redis.mark_processed(item)
         except Exception as e:
@@ -925,7 +923,7 @@ def handle_selection_rut(update, context,sheet_id=SHEET_RUT_ID):
         print(str(e))
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
-def hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html,ma_chuyen_khoan):
+def hanlde_sendmess_rut( caption, ck_ra_int, res_mess,ck_vao_int_html, ck_ra_int_html,ma_chuyen_khoan):
     if caption.get('stk') != '':
                     stk_number, bank, name = helper.tach_stk_nganhang_chutk(caption.get('stk'))
                     stk_number = html.escape(stk_number)
@@ -949,14 +947,10 @@ def hanlde_sendmess_rut(message, caption, ck_ra_int, res_mess,ck_vao_int_html, c
                     if ck_vao_int_html:
                         reply_msg += f"💰 Tổng số tiền nhận lại là: <code><b>{ck_vao_int_html}</b></code> VND\n\n"
                     reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
-                    message.reply_photo(
-                            photo=qr_buffer,
-                            caption=reply_msg,
-                            parse_mode="HTML"
-                        )
+                    return  reply_msg,qr_buffer
     else:
         reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
-        message.reply_text(reply_msg,parse_mode="HTML")
+        return reply_msg,None
 
         
 
