@@ -176,8 +176,8 @@ def validate_caption(update, chat_id, caption):
             errmess = send_format_guide(missing_keys)
             return None, errmess
 
-        parsed = helper.parse_message(caption)
-        if 'rut' not in parsed:
+        
+        if 'rut' not in present_dict:
     
             return None, "❌  thiếu key 'rut'"
         
@@ -188,7 +188,7 @@ def validate_caption(update, chat_id, caption):
         
         if  validate == False:
             return None, err
-        return parsed, None
+        return present_dict, None
 
     return {}, None
 
