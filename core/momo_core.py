@@ -142,7 +142,7 @@ def handle_photo_momo(update, context):
     
     # 👉 Ảnh đơn → gán trực tiếp thành list
     if message.media_group_id is None:
-        parsed, error_msg = validate_caption(update,chat_id, message.caption)
+        parsed, error_msg = validate_caption(chat_id, message.caption)
         if error_msg:
             message.reply_text(error_msg,parse_mode="Markdown")
             return
