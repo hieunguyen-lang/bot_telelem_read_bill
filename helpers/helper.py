@@ -281,13 +281,13 @@ def parse_message(text: str) -> dict:
         start = match.end()
         end = matches[i+1].start() if i < len(matches)-1 else len(text)
 
-        # kiểm tra khoảng giữa
+        # Check bắt buộc phải có dấu phẩy hoặc xuống dòng
         if i < len(matches)-1:
-            between = text[start:end].strip()
-            if "," not in between and "\n" not in between:
+            separator = text[start:matches[i+1].start()]
+            if "," not in separator and "\n" not in separator:
                 key1 = key_raw.strip()
                 key2 = matches[i+1].group(1).strip()
-                return None, f"❌ Thiếu dấu phẩy giữa '{key1}' và '{key2}'."
+                return None, f"❌ Giữa '{key1}' và '{key2}' thiếu dấu phẩy hoặc xuống dòng."
 
         # lấy giá trị
         value_raw = text[start:end].strip().rstrip(",")
