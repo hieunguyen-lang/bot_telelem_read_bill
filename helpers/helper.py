@@ -205,6 +205,7 @@ def parse_message_momo(text):
         "khach": r"Khach\s*[:\-]\s*\{(.+?)\}",
         "phi": r"Phi\s*[:\-]\s*\{(.+?)\}",
         "ck_ra": r"ck[_\s]?ra\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+        "ck_vao": r"ck[_\s]?vao\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
         "stk": r"Stk\s*[:\-]\s*(?:\{)?([^\n\}]+)(?:\})?",
         "note": r"Note\s*[:\-]\s*\{(.+?)\}"
     }

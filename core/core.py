@@ -124,7 +124,7 @@ def validate_caption(update, chat_id, caption):
         has_rut_thua = "rut_thua" in present_dict
 
 
-         # Nếu cả 2 loại cùng có → lỗi
+        # Nếu cả 2 loại cùng có → lỗi
         if (has_ck_vao or has_rut_thieu) and (has_ck_ra or has_rut_thua):
             return None,"❌ Lỗi: không được vừa có cả rút thiếu(ck_vao,rut_thieu) và rút thừa(ck_ra,rut_thua)."
         # Nếu có dấu hiệu rút thiếu
@@ -161,7 +161,7 @@ def validate_caption(update, chat_id, caption):
         return None, "❌ Lỗi: Không tìm thấy thông tin giao dịch hợp lệ."
 
     elif str(chat_id) == GROUP_RUT_ID:  
-        required_keys = ["khach", "sdt", "rut", "phi", "tong", "lich_canh_bao", "ck_vao", "ck_ra", "stk", "note"]
+        required_keys = ["khach", "sdt", "rut", "phi", "tong", "lich_canh_bao", "ck_vao", "stk", "note"]
 
         present_dict = helper.parse_message_rut(caption)
         print("present_dict:",present_dict)
@@ -177,8 +177,8 @@ def validate_caption(update, chat_id, caption):
     
             return None, "❌  thiếu key 'rut'"
         
-        if helper.parse_currency_input_int(present_dict.get("ck_ra")) == 0 and helper.parse_currency_input_int(present_dict.get("ck_vao"))==0:
-            return None, "❌  ck_ vao và ck_ ra không thể cùng bằng: 0"
+        if helper.parse_currency_input_int(present_dict.get("ck_ra")) == 0:
+            return None, "❌ ck_ ra không thể bằng: 0"
         
         validate, err  = helper.validate_stk_nganhang_chutk(present_dict.get('stk'))
         

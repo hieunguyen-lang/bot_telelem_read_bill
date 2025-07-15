@@ -43,7 +43,7 @@ db = MySQLConnector(
 media_group_storage = {}
 redis=RedisDuplicateChecker()
 
-def validate_caption(update, chat_id, caption):
+def validate_caption( chat_id, caption):
     if not caption:
         return None, "❌ Không tìm thấy nội dung để xử lý. Vui lòng thêm caption cho ảnh."
 
@@ -78,41 +78,46 @@ def validate_caption(update, chat_id, caption):
     caption = normalize_caption(caption)
 
     # Check theo nhóm
-    if str(chat_id) == GROUP_MOMO_ID:
-        required_keys = ["khach", "phi", "ck_ra", "ck_vao", "stk", "note"]
+    if 1==1:
+        required_keys = ["khach", "phi", "stk", "note"]
     
         present_dict = helper.parse_message_momo(caption)
+        print("present_dict:", present_dict)
         present_keys =list(present_dict.keys())
         missing_keys = [key for key in required_keys if key not in present_keys]
-        # Kiểm tra thiếu cả ck_ra và ck_vao
-        if "ck_ra" in missing_keys and "ck_vao" in missing_keys:
-            return None, "❌ Bạn thiếu cả ck_ra và ck_vao"
-        # Kiểm tra thiếu các key khác (ngoài ck_ra / ck_vao)
-        others_missing = [k for k in missing_keys if k not in ("ck_ra", "ck_vao")]
-        if others_missing:
-            errmess = send_format_guide(others_missing)
+        if missing_keys:
+            errmess = send_format_guide(missing_keys)
             return None, errmess
-        if "ck_ra" not in missing_keys:
-            if helper.parse_currency_input_int(present_dict['ck_ra']) == 0:
-                return None, "❌  Bạn chưa điền ck_ra hợp lệ"
-        if "ck_vao" not in missing_keys:
-            if helper.parse_currency_input_int(present_dict['ck_vao']) == 0:
-                return None, "❌  Bạn chưa điền ck_vao hợp lệ"
         validate, err  = helper.validate_stk_nganhang_chutk(present_dict.get('stk'))
         
         if  validate == False:
             return None, err
+        has_ck_vao = "ck_vao" in present_dict
+        has_ck_ra = "ck_ra" in present_dict
+
+        # Nếu cả 2 loại cùng có → lỗi
+        if has_ck_vao and has_ck_ra :
+            return None,"❌ Lỗi: không được vừa có cả ck_vao và ck_ra. Vui lòng chỉ để 1 trong 2 trường này."
+        # Kiểm tra thiếu cả ck_ra và ck_vao
+        if "ck_ra" not in present_keys and "ck_vao" not in present_keys:
+            return None, "❌ Lỗi: thiếu trường ck_ra hoặc ck_vao. Vui lòng chỉ để 1 trong 2 trường này."
+        
+        if has_ck_ra:
+            if helper.parse_currency_input_int(present_dict['ck_ra']) == 0:
+                return None, "❌ Lỗi:  Bạn chưa điền ck_ra hợp lệ."
+            return present_dict, None
+        if has_ck_vao: 
+            if helper.parse_currency_input_int(present_dict['ck_vao']) == 0:
+                return None, "❌ Lỗi:  Bạn chưa điền ck_vao hợp lệ."
+            return present_dict, None
         
         return present_dict, None
-
-
     return {}, None
 
 def handle_photo_momo(update, context):
     chat_id = update.effective_chat.id
     chat_title = update.effective_chat.title
     print(f"Ảnh gửi từ group {chat_title} (ID: {chat_id})")
-    print()
     # if str(chat_id) not in [str(GROUP_MOMO_ID)]:
     #     print(f"⛔ Tin nhắn từ group lạ (ID: {chat_id}) → Bỏ qua")
     #     return
@@ -152,7 +157,7 @@ def handle_photo_momo(update, context):
     
     if media_group_id not in media_group_storage:
         # Ảnh đầu tiên của media group → parse caption luôn
-        parsed, error_msg = validate_caption(update, chat_id, message.caption)
+        parsed, error_msg = validate_caption( chat_id, message.caption)
         if error_msg:
             message.reply_text(error_msg,parse_mode="Markdown")
             return
@@ -190,7 +195,6 @@ def handle_momo_bill(update, context):
     timestamp = message.date.strftime("%Y-%m-%d %H:%M:%S")
     image_b64_list = context.user_data.get("image_data", [])
     caption = context.user_data.get("caption", "")  # 👈 lấy caption
-    print(caption)
     try:
         if not image_b64_list:
             message.reply_text("❌ Không tìm thấy ảnh nào để xử lý.")
@@ -206,6 +210,10 @@ def handle_momo_bill(update, context):
         count_img=0
         seen_keys = set()
         ma_chuyen_khoan = helper.base62_uuid4()
+        ck_vao_int = helper.parse_currency_input_int(caption.get("ck_vao"))
+        ck_ra_int = helper.parse_currency_input_int(caption.get("ck_ra"))
+        print("ck_vao_int:", ck_vao_int)
+        print("ck_ra_int:", ck_ra_int)
         for img_b64 in image_b64_list:
             count_img += 1
             result = analyzer.analyze_bill_momo_gpt(img_b64)    
@@ -261,8 +269,8 @@ def handle_momo_bill(update, context):
                 helper.safe_get(caption, "khach"),
                 key_check_dup,
                 int(helper.parse_percent(caption['phi'])  *(int(result.get("so_tien") or 0)- helper.parse_currency_input_int(helper.safe_get(result, "tong_phi")))),
-                0,
-                0,
+                ck_vao_int,
+                ck_ra_int,
                 ma_chuyen_khoan,
                 helper.safe_get(caption, "stk")
             ]
@@ -282,16 +290,17 @@ def handle_momo_bill(update, context):
                 f" Thời gian: {helper.fix_datetime(result.get('thoi_gian')) or 'N/A'}"
             )
         percent = helper.parse_percent(caption['phi'])   
-        if  caption.get('ck_ra', 0) != 0:
+        
+        if  ck_ra_int != 0:
             ck_ra_cal = (sum-sum_tong_phi) -  percent*(sum-sum_tong_phi)
-            ck_ra_caption_int =helper.parse_currency_input_int(caption['ck_ra'])
+            
             
             print("sum_tong_phi: ",int(percent*(sum-sum_tong_phi)))
-            print("ck_ra_caption_int: ",ck_ra_caption_int)
+            print("ck_ra_caption_int: ",ck_ra_int)
             print("ck_ra_cal: ",int(ck_ra_cal))
             for row in list_row_insert_db:
                 row[18] = int(ck_ra_cal)  
-            if int(ck_ra_cal) != ck_ra_caption_int:
+            if int(ck_ra_cal) != ck_ra_int:
                 message.reply_text(
                     "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n"
                     f"👉 Tổng rút: {sum:,}đ\n"
@@ -302,22 +311,21 @@ def handle_momo_bill(update, context):
                     parse_mode="HTML"
                 )
                 return
-        if  caption.get('ck_vao', 0) != 0:
+        if  ck_vao_int != 0:
             ck_vao_cal =  int(percent*(sum-sum_tong_phi))
-            ck_vao_caption_int =helper.parse_currency_input_int(caption['ck_vao'])
+           
             
             print("sum_tong_phi: ",ck_vao_cal)
-            print("ck_vao_caption_int: ",ck_vao_caption_int)
+            print("ck_vao_caption_int: ",ck_vao_int)
             print("ck_vao_cal: ",int(ck_vao_cal))
-            for row in list_row_insert_db:
-                row[17] = int(ck_vao_cal)
-            if int(ck_vao_cal) != ck_vao_caption_int:
+            
+            if int(ck_vao_cal) != ck_vao_int:
                 message.reply_text(
                     "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n"
                     f"👉 Tổng rút: {sum:,}đ\n"
                     f"👉 Phí phần trăm: {percent * 100:.2f}%\n"
                     f"👉 Tổng phí: {int(percent*(sum-sum_tong_phi)):,}đ\n\n"
-                    f"👉 ck_vao đúng phải là: {int(ck_ra_cal):,}đ\n\n"
+                    f"👉 ck_vao đúng phải là: {int(ck_vao_cal):,}đ\n\n"
                     f"Sao chép nhanh: <code>{int(ck_vao_cal)}</code>",
                     parse_mode="HTML"
                 )
@@ -333,8 +341,12 @@ def handle_momo_bill(update, context):
         for item in list_invoice_key:
             redis.mark_processed_momo(item)
         try:
-            mess,photo = handle_sendmess(caption, res_mess, ck_ra_cal,ma_chuyen_khoan)
-            helper.send_long_message(message,mess,photo)
+            if  ck_ra_int != 0:
+                mess,photo = handle_sendmess(caption, res_mess, ck_ra_cal,ma_chuyen_khoan,"ck_ra")
+                helper.send_long_message(message,mess,photo)
+            if  ck_vao_int != 0:
+                mess,photo = handle_sendmess(caption, res_mess, ck_vao_cal,ma_chuyen_khoan,"ck_vao")
+                helper.send_long_message(message,mess,photo)
         except Exception as e:
             for item in list_invoice_key:
                 redis.mark_processed_momo(item)
@@ -348,7 +360,8 @@ def handle_momo_bill(update, context):
             redis.remove_invoice_momo(item)
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
-def handle_sendmess( caption, res_mess, ck_ra_cal,ma_chuyen_khoan):
+def handle_sendmess( caption, res_mess, ck_cal,ma_chuyen_khoan, type):
+    print("Thông tin type:", type)
     if res_mess:
             if caption.get('stk') != '':
                 stk_number, bank, name = helper.tach_stk_nganhang_chutk(caption.get('stk'))
@@ -356,16 +369,20 @@ def handle_sendmess( caption, res_mess, ck_ra_cal,ma_chuyen_khoan):
                 bank = html.escape(bank)
                 ctk = html.escape(name)
 
-                ck_ra_int_html = html.escape(str(helper.format_currency_vn(int(ck_ra_cal))))
-                qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(int(ck_ra_cal)),ma_chuyen_khoan)
-
-                reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản ra  cho khách hàng, và check lại xem số liệu đã đúng chưa nhé !:</b>\n\n"
+                ck_cal_html = html.escape(str(helper.format_currency_vn(int(ck_cal))))
+                qr_buffer =  generate_qr.generate_qr_binary(stk_number, bank, str(int(ck_cal)),ma_chuyen_khoan)
+                if type == "ck_ra":
+                    reply_msg = "<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản ra  cho khách hàng, và check lại xem số liệu đã đúng chưa nhé !:</b>\n\n"
+                elif type == "ck_vao":
+                    reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi đưa cho khách chuyển khoản phí về công ty, và đừng quên kiểm tra bank xem nhận được tiền phí dịch vụ chưa nhé !</b>\n\n"
                 reply_msg += f"🏦 STK: <code>{stk_number}</code>\n\n"
                 reply_msg += f"💳 Ngân hàng: <code><b>{bank}</b></code>\n\n"
                 reply_msg += f"👤 CTK:  <code><b>{ctk}</b> </code>\n\n"
                 reply_msg += f"📝 Nội dung:  <code><b>{ma_chuyen_khoan}</b> </code>\n\n"
-                reply_msg += f"💰 Tổng số tiền chuyển lại khách: <code>{ck_ra_int_html}</code> VND\n\n"
-
+                if type == "ck_ra":
+                    reply_msg += f"💰 Tổng số tiền chuyển lại khách: <code>{ck_cal_html}</code> VND\n\n"
+                elif type == "ck_vao":
+                    reply_msg += f"💰 Tổng số tiền nhận lại là: <code>{ck_cal_html}</code> VND\n\n"
                 reply_msg += "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
                 return  reply_msg,qr_buffer
             else:
