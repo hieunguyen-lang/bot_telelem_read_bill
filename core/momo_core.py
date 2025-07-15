@@ -81,7 +81,9 @@ def validate_caption( chat_id, caption):
     if 1==1:
         required_keys = ["khach", "phi", "stk", "note"]
     
-        present_dict = helper.parse_message_momo(caption)
+        present_dict, errmes = helper.parse_message(caption)
+        if errmes:
+            return None, errmes
         print("present_dict:", present_dict)
         present_keys =list(present_dict.keys())
         missing_keys = [key for key in required_keys if key not in present_keys]
@@ -125,7 +127,7 @@ def handle_photo_momo(update, context):
     media_group_id = message.media_group_id or f"single_{message.message_id}"
     if message.media_group_id is None or media_group_id not in media_group_storage:
         caption = message.caption or ""
-        if "{" not in caption or "}" not in caption:
+        if "@AI_RutTienNhanh_bot" not in caption:
             return  # hoặc gửi cảnh báo
      # 👉 Bỏ qua nếu tin nhắn không có ảnh
     if not message or not message.photo:

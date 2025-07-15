@@ -1,31 +1,17 @@
-from PIL import Image
-import os
+from helpers import helper
 
-def make_grid(image_paths, output_path, rows, cols):
-    images = [Image.open(p).convert("RGB") for p in image_paths]
-    w, h = images[0].size  # lấy kích thước gốc
-    grid = Image.new('RGB', (cols*w, rows*h), (255,255,255))
-
-    for i, img in enumerate(images):
-        grid.paste(img, (w*(i%cols), h*(i//cols)))
-
-    grid.save(output_path, quality=95)
-
-# ===============================
-# Đường dẫn ảnh gốc
-ket_toan_images = [
-    "dataset\\ketoan_hd.jpg",
-    "dataset\\ketoan_mb.jpg",
-    "dataset\\kettoan_vp.jpg",
-]
-
-thanh_toan_images = [
-    "dataset\\thanhtoan_hdbank.jpg",
-    "dataset\\thanhtoan_Mbbank.jpg",
-    "dataset\\thanhtoan_vp.jpg",
-    "dataset\\MPOS.jpg",
-]
-
-# Gộp và lưu
-make_grid(ket_toan_images, "bills_ket_toan.jpg", rows=2, cols=2)
-make_grid(thanh_toan_images, "bills_thanh_toan.jpg", rows=2, cols=2)
+text = """
+Khach: đoàn văn hải,
+Sdt: 0975526753,
+Rut: 28.050M,
+Phi: 2%,
+TienPhi: 581.000,
+Tong: 29.050M,
+LichCanhBao: 15,
+ck_vao: {0},
+ck_ra: {28.469M},
+Stk: 109002443103 - vietinbank- đoàn van hải,
+Note: khách rút 29tr050k - 581k fee  còn lại 28tr469k ck lại giúp em,
+"""
+parse_message_momo_new = helper.parse_message(text)
+print(parse_message_momo_new)

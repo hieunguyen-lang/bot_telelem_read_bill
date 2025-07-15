@@ -81,17 +81,17 @@ def validate_caption(update, chat_id, caption):
 
         message += (
             "📌 Ví dụ định dạng đúng:\n"
-            "`Khach: {Nguyễn Văn A}`\n"
-            "`Sdt: {0912345678}`\n"
-            "`Rut: {40.000M}` hoặc `Dao: {32.400M}`\n"
-            "`Phi: {2%}`\n"
-            "`TienPhi: {800.000}`\n"
-            "`Tong: {40.800M}`\n"
-            "`LichCanhBao: {15}`\n"
-            "`ck_vao: {3.058M}`\n"
-            "`rut_thieu: {0}`\n"
-            "`Stk: VPBANK - 0123456789 - Nguyễn Văn A`\n"
-            "`Note: {Khách chuyển khoản hộ em}`"
+            "`Khach: Nguyễn Văn A`,\n"
+            "`Sdt: 0912345678`,\n"
+            "`Rut: 40.000M` hoặc `Dao: 32.400M`,\n"
+            "`Phi: 2%`,\n"
+            "`TienPhi: 800.000`,\n"
+            "`Tong: 40.800M`,\n"
+            "`LichCanhBao: 15`,\n"
+            "`ck_vao: 3.058M`,\n"
+            "`rut_thieu: 0`,\n"
+            "`Stk: VPBANK - 0123456789 - Nguyễn Văn A`,\n"
+            "`Note: Khách chuyển khoản hộ em`,"
         )
         return message
 
@@ -102,7 +102,9 @@ def validate_caption(update, chat_id, caption):
     if str(chat_id) == GROUP_DAO_ID:
         required_keys = ["khach", "sdt", "dao", "phi", "lich_canh_bao", "stk", "note"]
     
-        present_dict = helper.parse_message_dao(caption)
+        present_dict, errmes = helper.parse_message(caption)
+        if errmes:
+            return None, errmes
         print("present_dict:",present_dict)
         present_keys =list(present_dict.keys())
         missing_keys = [key for key in required_keys if key not in present_keys]
@@ -163,7 +165,9 @@ def validate_caption(update, chat_id, caption):
     elif str(chat_id) == GROUP_RUT_ID:  
         required_keys = ["khach", "sdt", "rut", "phi", "tong", "lich_canh_bao", "ck_vao", "stk", "note"]
 
-        present_dict = helper.parse_message_rut(caption)
+        present_dict, errmes = helper.parse_message(caption)
+        if errmes:
+            return None, errmes
         print("present_dict:",present_dict)
         present_keys =list(present_dict.keys())
         missing_keys = [key for key in required_keys if key not in present_keys]
@@ -172,7 +176,7 @@ def validate_caption(update, chat_id, caption):
             errmess = send_format_guide(missing_keys)
             return None, errmess
 
-        parsed = helper.parse_message_rut(caption)
+        parsed = helper.parse_message(caption)
         if 'rut' not in parsed:
     
             return None, "❌  thiếu key 'rut'"
@@ -202,7 +206,7 @@ def handle_photo(update, context):
     media_group_id = message.media_group_id or f"single_{message.message_id}"
     if message.media_group_id is None or media_group_id not in media_group_storage:
         caption = message.caption or ""
-        if "{" not in caption or "}" not in caption:
+        if "@AI_RutTienNhanh_bot" not in caption :
             return  # hoặc gửi cảnh báo
      # 👉 Bỏ qua nếu tin nhắn không có ảnh
     if not message or not message.photo:

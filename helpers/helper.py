@@ -23,6 +23,17 @@ DISPLAY_KEYS = {
     "stk": "Stk",
     "note": "Note"
 }
+class DotDict(dict):
+    """Cho phép truy cập key bằng dot notation."""
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(f"'DotDict' object has no attribute '{key}'")
+    def __setattr__(self, key, value):
+        self[key] = value
+    def __delattr__(self, key):
+        del self[key]
 def format_missing_keys(missing):
     return [DISPLAY_KEYS.get(k, k) for k in missing]
 
@@ -195,32 +206,101 @@ def parse_message_dao(text):
 
     return data
 
-def parse_message_momo(text):
-    data = {}
-    if not text:
-        return None
+# def parse_message_momo(text):
+#     data = {}
+#     if not text:
+#         return None
 
-    # Các pattern tương ứng với định dạng: Trường: {giá trị}
-    patterns = {
-        "khach": r"Khach\s*[:\-]\s*\{(.+?)\}",
-        "phi": r"Phi\s*[:\-]\s*\{(.+?)\}",
-        "ck_ra": r"ck[_\s]?ra\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
-        "ck_vao": r"ck[_\s]?vao\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
-        "stk": r"Stk\s*[:\-]\s*(?:\{)?([^\n\}]+)(?:\})?",
-        "note": r"Note\s*[:\-]\s*\{(.+?)\}"
+#     # Các pattern tương ứng với định dạng: Trường: {giá trị}
+#     patterns = {
+#         "khach": r"Khach\s*[:\-]\s*\{(.+?)\}",
+#         "phi": r"Phi\s*[:\-]\s*\{(.+?)\}",
+#         "ck_ra": r"ck[_\s]?ra\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+#         "ck_vao": r"ck[_\s]?vao\s*[:\-]\s*\{([\d.,a-zA-Z ]+)\}",
+#         "stk": r"Stk\s*[:\-]\s*(?:\{)?([^\n\}]+)(?:\})?",
+#         "note": r"Note\s*[:\-]\s*\{(.+?)\}"
+#     }
+
+#     for key, pattern in patterns.items():
+#         match = re.search(pattern, text, re.IGNORECASE)
+#         if match:
+#             data[key] = match.group(1).strip()
+
+#     # Nếu không có note mà dòng cuối là ghi chú thì gán
+#     last_line = text.strip().split('\n')[-1]
+#     if 'note' not in data and not any(k in last_line.lower() for k in ['khach:', 'stk:', 'chuyenkhoan:', '{']):
+#         data['note'] = last_line.strip()
+
+#     return data
+def parse_message(text: str) -> dict:
+    """
+    Parse message định dạng key: value, yêu cầu ngăn cách bằng dấu phẩy hoặc xuống dòng.
+    Nếu thiếu dấu phẩy hoặc xuống dòng → báo lỗi rõ ràng.
+    Trả về dict Python.
+    """
+    if not text:
+        raise ValueError("Dữ liệu trống.")
+
+    result = {}
+
+    key_map = {
+        "khach": "khach",
+        "sdt": "sdt",
+        "rut": "rut",
+        "dao": "dao",
+        "phi": "phi",
+        "tienphi": "tien_phi",
+        "tong": "tong",
+        "lichcanhbao": "lich_canh_bao",
+        "ckvao": "ck_vao",
+        "ckra": "ck_ra",
+        "rutthieu": "rut_thieu",
+        "rutthua": "rut_thua",
+        "stk": "stk",
+        "note": "note",
+        "doitac": "doitac"
     }
 
-    for key, pattern in patterns.items():
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            data[key] = match.group(1).strip()
+    keys_pattern = "|".join([
+        r"Khach", r"Sdt", r"Rut", r"Dao", r"Phi", r"TienPhi", r"Tong",
+        r"LichCanhBao", r"ck_?vao", r"ck_?ra",
+        r"rut_?thieu", r"rut_?thua", r"Stk", r"Note", r"Note", r"Doitac"
+    ])
 
-    # Nếu không có note mà dòng cuối là ghi chú thì gán
-    last_line = text.strip().split('\n')[-1]
-    if 'note' not in data and not any(k in last_line.lower() for k in ['khach:', 'stk:', 'chuyenkhoan:', '{']):
-        data['note'] = last_line.strip()
+    pattern = re.compile(
+        rf"({keys_pattern})\s*[:\-]",
+        re.IGNORECASE
+    )
 
-    return data
+    matches = list(pattern.finditer(text))
+    if not matches:
+        return None, "❌ Không tìm thấy key-value hợp lệ nào."
+
+    for i, match in enumerate(matches):
+        key_raw = match.group(1)
+        start = match.end()
+        end = matches[i+1].start() if i < len(matches)-1 else len(text)
+
+        # kiểm tra khoảng giữa
+        if i < len(matches)-1:
+            between = text[start:end].strip()
+            if "," not in between and "\n" not in between:
+                key1 = key_raw.strip()
+                key2 = matches[i+1].group(1).strip()
+                return None, f"❌ Thiếu dấu phẩy giữa '{key1}' và '{key2}'."
+
+        # lấy giá trị
+        value_raw = text[start:end].strip().rstrip(",")
+        if value_raw.startswith("{") and value_raw.endswith("}"):
+            value_raw = value_raw[1:-1].strip()
+
+        key_norm = key_raw.lower().replace("_", "").replace(" ", "")
+        key = key_map.get(key_norm, key_norm)
+
+        result[key] = value_raw
+
+    return result,None
+
 
 def parse_message_doiung(text):
     data = {}
