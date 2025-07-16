@@ -274,7 +274,8 @@ def handle_momo_bill(update, context):
                 ck_vao_int,
                 ck_ra_int,
                 ma_chuyen_khoan,
-                helper.safe_get(caption, "stk")
+                helper.safe_get(caption, "stk"),
+                helper.safe_get(caption, "note")
             ]
 
             print(row)
@@ -421,9 +422,10 @@ def insert_bill_rows(db, list_rows):
             ck_vao,
             ck_ra,
             ma_chuyen_khoan,
-            so_tk
+            so_tk,
+            note
         ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
     """
 

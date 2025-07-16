@@ -84,7 +84,7 @@ def validate_caption(update, chat_id, caption):
         send_format_guide(missing_keys)
         return None, "❌ Thiếu key: " + ", ".join(missing_keys)
 
-    parsed = helper.parse_message_doiung(caption)
+    parsed = helper.parse_message(caption)
     
     return parsed, None
 
@@ -102,7 +102,7 @@ def handle_photo_doiung(update, context):
     media_group_id = message.media_group_id or f"single_{message.message_id}"
     if message.media_group_id is None or media_group_id not in media_group_storage:
         caption = message.caption or ""
-        if "{" not in caption or "}" not in caption:
+        if "@AI_RutTienNhanh_bot" not in caption:
             return  # hoặc gửi cảnh báo
      # 👉 Bỏ qua nếu tin nhắn không có ảnh
     if not message or not message.photo:
