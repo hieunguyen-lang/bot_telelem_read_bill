@@ -40,7 +40,7 @@ db = MySQLConnector(
 media_group_storage = {}
 redis=RedisDuplicateChecker()
 
-def validate_caption(update, chat_id, caption):
+def validate_caption( chat_id, caption):
     if not caption:
         return None, "❌ Không tìm thấy nội dung để xử lý. Vui lòng thêm caption cho ảnh."
 
@@ -68,25 +68,27 @@ def validate_caption(update, chat_id, caption):
             "`Tong: {0}`\n"
             "`Note: {Lô này tổng 50.069.782 giá nhập vào 3.5%}`"
         )
-        update.message.reply_text(message, parse_mode="Markdown")
+        return message
 
     # 🔄 Chuẩn hóa caption
     caption = normalize_caption(caption)
 
-  
-    required_keys = ["doitac", "phi", "tong", "note"]
+    # Check theo nhóm
+    if 1==1:
+        required_keys = ["doitac", "phi", "tong", "note"]
     
-    present_dict = helper.parse_message_doiung(caption)
-    present_keys =list(present_dict.keys())
-    missing_keys = [key for key in required_keys if key not in present_keys]
-
-    if missing_keys:
-        send_format_guide(missing_keys)
-        return None, "❌ Thiếu key: " + ", ".join(missing_keys)
-
-    parsed = helper.parse_message(caption)
-    
-    return parsed, None
+        present_dict, errmes = helper.parse_message(caption)
+        if errmes:
+            return None, errmes
+        print("present_dict:", present_dict)
+        present_keys =list(present_dict.keys())
+        missing_keys = [key for key in required_keys if key not in present_keys]
+        if missing_keys:
+            errmess = send_format_guide(missing_keys)
+            return None, errmess
+        
+        return present_dict, None
+    return {}, None
 
 
 
@@ -94,7 +96,7 @@ def handle_photo_doiung(update, context):
     chat_id = update.effective_chat.id
     chat_title = update.effective_chat.title
     print(f"Ảnh gửi từ group {chat_title} (ID: {chat_id})")
-    print()
+
     # if str(chat_id) not in [str(GROUP_MOMO_ID)]:
     #     print(f"⛔ Tin nhắn từ group lạ (ID: {chat_id}) → Bỏ qua")
     #     return
@@ -119,8 +121,9 @@ def handle_photo_doiung(update, context):
     
     # 👉 Ảnh đơn → gán trực tiếp thành list
     if message.media_group_id is None:
-        parsed, error_msg = validate_caption(update,chat_id, message.caption)
+        parsed, error_msg = validate_caption(chat_id, message.caption)
         if error_msg:
+            message.reply_text(error_msg,parse_mode="Markdown")
             return
 
         context.user_data["image_data"] = [img_b64]
@@ -133,8 +136,9 @@ def handle_photo_doiung(update, context):
     
     if media_group_id not in media_group_storage:
         # Ảnh đầu tiên của media group → parse caption luôn
-        parsed, error_msg = validate_caption(update, chat_id, message.caption)
+        parsed, error_msg = validate_caption( chat_id, message.caption)
         if error_msg:
+            message.reply_text(error_msg,parse_mode="Markdown")
             return
 
         media_group_storage[media_group_id] = {
@@ -248,36 +252,48 @@ def handle_momo_bill(update, context):
         print(sum)
         print(int(tong_int))
         percent = helper.parse_percent(caption['phi']) 
-        if int(sum) == tong_int:
+        if int(sum) != tong_int:
+            sum_html = html.escape(str(int(sum)))
+            message.reply_text(
+                    "❗ Có vẻ bạn tính sai tổng rồi 😅\n"
+                    f"👉 Tổng tôi tính là: {int(sum):,}đ\n"
+                    f"Sao chép nhanh: <code>{sum_html}</code>",
+                    parse_mode="HTML"
+                )
+            return  
+        try:
             _, err = insert_bill_rows(db,list_row_insert_db)
             if err:
-                message.reply_text(f"⚠️ Hóa đơn đã được gửi trước đó: {str(err)}")
-                return
+                    db.connection.rollback()
+                    message.reply_text(f"⚠️ Lỗi gửi vào db: {str(err)}")
+                    message.reply_text(f"⚠️ Hóa đơn đã được gửi trước đó: {str(err)}")
+                    return
             for item in list_invoice_key:
                 redis.mark_processed_doiung(item)
-            db.close()
             if res_mess:
                 reply_msg = "✅ Đã xử lý các hóa đơn:\n\n" + "\n".join(res_mess)
             else:
                 reply_msg = "⚠️ Không xử lý được hóa đơn nào."
 
             message.reply_text(reply_msg)
-        else:
-            sum_html = html.escape(str(int(sum)))
-            message.reply_text(
-                    "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n"
-                    f"👉 Tổng tôi tính là: {int(sum):,}đ\n"
-                    f"Sao chép nhanh: <code>{sum_html}</code>",
-                    parse_mode="HTML"
-                )
-            return   
-       
+            db.connection.commit()
+        except Exception as e:
+            db.connection.rollback()
+            for item in list_invoice_key:
+                redis.remove_invoice_momo(item)
+            raise e
+             
+        
     except Exception as e:
+        db.connection.rollback()
+        for item in list_invoice_key:
+            redis.remove_invoice_momo(item)
         message.reply_text("⚠️ Có lỗi xảy ra trong quá trình xử lí: " + str(e))
 
 
 def insert_bill_rows(db, list_rows):
     print("Insert DB")
+    #print(list_rows)
     query = """
         INSERT INTO doi_ung (
             update_at,
