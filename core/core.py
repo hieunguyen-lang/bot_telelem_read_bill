@@ -639,6 +639,8 @@ def hanlde_sendmess_dao( caption, ck_ra_int, res_mess, ck_vao_int_html, ck_ra_in
                         reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi chuyển khoản ra  cho khách hàng, và check lại xem số liệu đã đúng chưa nhé !</b>\n\n"
                     if ck_vao_int_html:
                         reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi đưa cho khách chuyển khoản phí về công ty, và đừng quên kiểm tra bank xem nhận được tiền phí dịch vụ chưa nhé !</b>\n\n"
+                    if ck_ra_int_html is None and caption.get('rut_thua'):
+                        reply_msg = f"<b>Bạn vui lòng kiểm tra thật kỹ lại các thông tin trước khi đưa cho khách chuyển khoản phí về công ty, và đừng quên kiểm tra bank xem nhận được tiền phí dịch vụ chưa nhé !</b>\n\n"
                     reply_msg += f"🏦 STK: <code><b>{stk_number}</b></code>\n\n"
                     reply_msg += f"💳 Ngân hàng: <b>{bank}</b>\n\n"
                     reply_msg += f"👤 CTK: <b>{ctk}</b>\n\n"
