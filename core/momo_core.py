@@ -220,7 +220,7 @@ def handle_momo_bill(update, context):
             count_img += 1
             result = analyzer.analyze_bill_momo_gpt(img_b64)    
                 
-            key_check_dup = helper.generate_invoice_dien(result)
+            key_check_dup = helper.generate_invoice_dien(result,caption.get("khach"))
             duplicate = redis.is_duplicate_momo(key_check_dup)
 
             #duplicate = False

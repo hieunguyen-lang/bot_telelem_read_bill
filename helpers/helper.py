@@ -372,7 +372,7 @@ def remove_accents(s: str) -> str:
     s = re.sub(r'\s+', '', s)  # bỏ toàn bộ khoảng trắng
     return s
 
-def generate_invoice_dien(result: dict) -> str:
+def generate_invoice_dien(result: dict, khach: str) -> str:
     print("[Tạo key redis]")
 
     def safe_get(d, key):
@@ -384,6 +384,7 @@ def generate_invoice_dien(result: dict) -> str:
         safe_get(result, "dia_chi"),
         safe_get(result, "so_tien"),
         safe_get(result, "ma_giao_dich"),
+        khach
     ]
 
     parts_clean = [remove_accents(p) for p in parts]
