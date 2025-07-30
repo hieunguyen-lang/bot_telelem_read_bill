@@ -196,7 +196,7 @@ def handle_momo_bill(update, context):
             
             result = analyzer.analyze_bill_momo_gpt(img_b64)    
                 
-            key_check_dup = helper.generate_invoice_dien(result)
+            key_check_dup = helper.generate_invoice_dien(result,helper.safe_get(caption, "doitac"))
             duplicate = redis.is_duplicate_doiung(key_check_dup)
             duplicate = False
             if duplicate:
