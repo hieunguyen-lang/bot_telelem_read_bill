@@ -346,7 +346,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
         sum=0
         ten_ngan_hang=None
         ck_vao_int = helper.parse_currency_input_int(caption.get("ck_vao"))
-        rut_thieu = helper.parse_currency_input_int(caption.get("rut_thieu"))
+        rut_thieu = helper.parse_currency_input_int(helper.safe_get(caption,"rut_thieu"))
         ck_ra_int = helper.parse_currency_input_int(caption.get("ck_ra"))
         rut_thua = helper.parse_currency_input_int(caption.get("rut_thua"))
         batch_id =str(uuid.uuid4())
@@ -473,7 +473,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             print("sum: ",sum)    
             print("percent: ",percent)
             print("cal_phi_dich_vu: ",cal_phi_dich_vu)
-            if rut_thieu and ck_vao_int:
+            if ck_vao_int:
                 cal_ck_vao = int(cal_phi_dich_vu + rut_thieu)
                 if cal_ck_vao != ck_vao_int:
                     try:
