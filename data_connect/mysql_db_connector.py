@@ -45,7 +45,7 @@ class MySQLConnector:
             self.cursor.executemany(query, params_list)
             #self.connection.commit()
             return self.cursor.rowcount, None
-        except Error as e:
+        except Exception as e:
             print("❌ Lỗi khi thực thi nhiều dòng:", e)
             self.connection.rollback()
             return None, e
