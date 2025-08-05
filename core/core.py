@@ -127,10 +127,10 @@ def validate_caption(update, chat_id, caption):
 
 
         # Nếu cả 2 loại cùng có → lỗi
-        if (has_ck_vao or has_rut_thieu) and (has_ck_ra or has_rut_thua):
-            return None,"❌ Lỗi: không được vừa có cả rút thiếu(ck_vao,rut_thieu) và rút thừa(ck_ra,rut_thua)."
+        if (has_ck_vao and has_rut_thieu) and (has_rut_thua):
+            return None,"❌ Lỗi: không được vừa có cả rút thiếu(ck_vao,rut_thieu) và rút thừa(ck_ra hoặc ck_vao,rut_thua)."
         # Nếu có dấu hiệu rút thiếu
-        if has_ck_vao or has_rut_thieu:
+        if  has_rut_thieu:
             if not (has_ck_vao and has_rut_thieu):
                 return None,(
                     "❌ Lỗi: Để xử lý rút thiếu, bạn cần nhập **cả 2 trường**: `ck_vao` và `rut_thieu`. "
@@ -139,22 +139,23 @@ def validate_caption(update, chat_id, caption):
             if helper.parse_currency_input_int(present_dict.get("ck_vao")) == 0 and helper.parse_currency_input_int(present_dict.get("rut_thieu"))==0:
                 return None, "❌  ck_ vao và rut_ thieu không thể cùng bằng: 0"
             # ✅ Đã hợp lệ rút thiếu, nhưng lại có thêm `ck_ra` hoặc `rut_thua`
-            if has_ck_ra or has_rut_thua:
+            if  has_rut_thua:
                 return None, (
-                    "❌ Lỗi: Đã nhập rút thiếu (`ck_vao`, `rut_thieu`) nhưng lại có thêm trường rút thừa(`ck_ra`, `rut_thua`)."
+                    "❌ Lỗi: Đã nhập rút thiếu (`ck_vao`, `rut_thieu`) nhưng lại có thêm trường rút thừa(`rut_thua`)."
                 )
             return present_dict, None
         # Nếu có dấu hiệu rút thừa
-        if has_ck_ra or has_rut_thua:
-            if not (has_ck_ra and has_rut_thua):
-                return None,(
-                    "❌ Lỗi: Để xử lý rút thừa, bạn cần nhập **cả 2 trường**: `ck_ra` và `rut_thua`. "
-                    "Hiện tại dữ liệu đang thiếu 1 trong 2."
+        if  has_rut_thua:
+            
+            if (has_ck_vao and has_ck_ra) or (not has_ck_vao and not has_ck_ra):
+                return None, (
+                    "❌ Lỗi: Để xử lý rút thừa, bạn cần nhập **chỉ 1 trong 2 trường**: `ck_ra` hoặc `ck_vao`. "
+                    "Hiện tại dữ liệu đang **có cả 2 hoặc không có trường nào**."
                 )
             elif helper.parse_currency_input_int(present_dict.get("ck_ra")) == 0 and helper.parse_currency_input_int(present_dict.get("rut_thua"))==0:
                 return None, "❌  ck_ vao và rut_ thieu không thể cùng bằng: 0"
             # ✅ Đã hợp lệ rút thừa, nhưng lại có thêm `ck_vao` hoặc `rut_thieu`
-            if has_ck_vao or has_rut_thieu:
+            if  has_rut_thieu:
                 return None, (
                     "❌ Lỗi: Đã nhập rút thừa (`ck_ra`, `rut_thua`) nhưng lại có thêm trường rút thiếu(`ck_vao`, `rut_thieu`)."
                 )
@@ -473,7 +474,7 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
             print("sum: ",sum)    
             print("percent: ",percent)
             print("cal_phi_dich_vu: ",cal_phi_dich_vu)
-            if ck_vao_int:
+            if ck_vao_int and rut_thieu:
                 cal_ck_vao = int(cal_phi_dich_vu + rut_thieu)
                 if cal_ck_vao != ck_vao_int:
                     try:
@@ -489,24 +490,74 @@ def handle_selection_dao(update, context, selected_type="bill",sheet_id=SHEET_RU
                     except Exception as e:
                         print("Lỗi khi gửi message:", e)
                     return   
-            elif rut_thua and ck_ra_int:  
-                cal_ck_ra = int(rut_thua - cal_phi_dich_vu)
-                if cal_ck_ra != ck_ra_int:
-                    try:
-                        message.reply_text(
-                            "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n\n"
-                            f"👉 Tổng Đáo: {sum:,}đ\n\n"
-                            f"👉 Phí phần trăm: {percent * 100:.2f}%\n\n"
-                            f"👉 Phí đúng phải là: <code>{cal_phi_dich_vu:,}</code>đ\n\n"
-                            f"👉 Rút thừa là: <code>{rut_thua:,}</code>đ\n\n"
-                            f"👉 ck_ra đúng phải là {rut_thua:,}đ - {cal_phi_dich_vu:,}đ: <code>{int(cal_ck_ra):,}</code>đ\n\n",
-                            parse_mode="HTML"
-                        )
-                    except Exception as e:
-                        print("Lỗi khi gửi message:", e)
-                    return  
-           
+            elif rut_thua:  
+                if (rut_thua > cal_phi_dich_vu):
+
+                    cal_ck_ra = int(rut_thua - cal_phi_dich_vu)
+                    if ck_ra_int:
+                        if cal_ck_ra != ck_ra_int:
+                            try:
+                                message.reply_text(
+                                    "❗ Có vẻ bạn tính sai ck_ra rồi 😅\n\n"
+                                    f"👉 Tổng Đáo: {sum:,}đ\n\n"
+                                    f"👉 Phí phần trăm: {percent * 100:.2f}%\n\n"
+                                    f"👉 Phí đúng phải là: <code>{cal_phi_dich_vu:,}</code>đ\n\n"
+                                    f"👉 Rút thừa là: <code>{rut_thua:,}</code>đ\n\n"
+                                    f"👉 ck_ra đúng phải là {rut_thua:,}đ - {cal_phi_dich_vu:,}đ: <code>{int(cal_ck_ra):,}</code>đ\n\n",
+                                    parse_mode="HTML"
+                                )
+                            except Exception as e:
+                                print("Lỗi khi gửi message:", e)
+                            return  
+                    elif ck_vao_int:
+                        try:
+                            message.reply_text(
+                                    "❗ Rút thừa nhiều hơn tiền phí vui lòng thay bằng ck_ra không phải ck_vao😅\n\n"
+                                    f"👉 Tổng Đáo: {sum:,}đ\n\n"
+                                    f"👉 Phí phần trăm: {percent * 100:.2f}%\n\n"
+                                    f"👉 Phí đúng phải là: <code>{cal_phi_dich_vu:,}</code>đ\n\n"
+                                    f"👉 Rút thừa là: <code>{rut_thua:,}</code>đ\n\n"
+                                    f"👉 ck_ra đúng phải là {rut_thua:,}đ - {cal_phi_dich_vu:,}đ: <code>{int(cal_ck_ra):,}</code>đ\n\n",
+                                    parse_mode="HTML"
+                            )
+                        except Exception as e:
+                            print("Lỗi khi gửi message:", e)
+                        return
+                elif (rut_thua <cal_phi_dich_vu):
+                    cal_ck_vao = int(cal_phi_dich_vu - rut_thua  )
+                    if ck_vao_int:
+                        
+                        if cal_ck_vao != ck_vao_int:
+                            try:
+                                message.reply_text(
+                                    "❗ Có vẻ bạn tính sai ck_vao rồi 😅\n\n"
+                                    f"👉 Tổng Đáo: {sum:,}đ\n\n"
+                                    f"👉 Phí phần trăm: {percent * 100:.2f}%\n\n"
+                                    f"👉 Phí đúng phải là: <code>{cal_phi_dich_vu:,}</code>đ\n\n"
+                                    f"👉 Rút thừa là: <code>{rut_thua:,}</code>đ\n\n"
+                                    f"👉 ck_vao đúng phải là {cal_phi_dich_vu:,}đ - {rut_thua:,}đ: <code>{int(cal_ck_vao):,}</code>đ\n\n",
+                                    parse_mode="HTML"
+                                )
+                            except Exception as e:
+                                print("Lỗi khi gửi message:", e)
+                            return  
+                    elif ck_ra_int:
+                        try:
+                            message.reply_text(
+                                    "❗ Rút thừa ít hơn tiền phí vui lòng thay bằng ck_vao không phải ck_ra😅\n\n"
+                                    f"👉 Tổng Đáo: {sum:,}đ\n\n"
+                                    f"👉 Phí phần trăm: {percent * 100:.2f}%\n\n"
+                                    f"👉 Phí đúng phải là: <code>{cal_phi_dich_vu:,}</code>đ\n\n"
+                                    f"👉 Rút thừa là: <code>{rut_thua:,}</code>đ\n\n"
+                                    f"👉 ck_vao đúng phải là {cal_phi_dich_vu:,}đ - {rut_thua:,}đ: <code>{int(cal_ck_vao):,}</code>đ\n\n",
+                                    parse_mode="HTML"
+                            )
+                        except Exception as e:
+                            print("Lỗi khi gửi message:", e)
+                        return  
+                
                     
+
         else:
             if rut_thieu and ck_vao_int:
                 cal_ck_vao = int(200000 + rut_thieu)
