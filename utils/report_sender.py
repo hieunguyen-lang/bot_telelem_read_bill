@@ -11,6 +11,22 @@ db = MySQLConnector(
     port=os.getenv("MYSQL_ROOT_PORT"),
     database=os.getenv("MYSQL_DATABASE")
 )
+def send_long_message(bot, chat_id, text, parse_mode=None):
+    MAX_LENGTH = 4096
+    if len(text) <= MAX_LENGTH:
+        bot.send_message(chat_id=chat_id, text=text, parse_mode=parse_mode)
+    else:
+        # Cắt thành nhiều đoạn
+        while len(text) > 0:
+            part = text[:MAX_LENGTH]
+            # Cắt tại dấu xuống dòng gần nhất để tránh vỡ format Markdown
+            last_newline = part.rfind('\n')
+            if last_newline != -1:
+                part = text[:last_newline]
+                text = text[last_newline + 1:]
+            else:
+                text = text[MAX_LENGTH:]
+            bot.send_message(chat_id=chat_id, text=part, parse_mode=parse_mode)
 
 def send_daily_report(bot: Bot, chat_id: int):
     tz = pytz.timezone("Asia/Ho_Chi_Minh")
@@ -55,9 +71,9 @@ def send_daily_report(bot: Bot, chat_id: int):
 
     tomorrow_str = tomorrow.strftime('%d/%m/%Y')
     report = "\n".join(lines)
-
-    bot.send_message(
-        chat_id=-4748164025,
-        text=f"📆 *Lịch hẹn ngày mai ({tomorrow_str})*: Dưới đây là danh sách khách có giao dịch đáo/rút bạn cần lưu ý:\n\n" + report,
-        parse_mode="Markdown"
+    final_message = (
+        f"📆 *Lịch hẹn ngày mai ({tomorrow_str})*: "
+        f"Dưới đây là danh sách khách có giao dịch đáo/rút bạn cần lưu ý:\n\n{report}"
     )
+
+    send_long_message(bot, chat_id, final_message, parse_mode="Markdown")
