@@ -21,7 +21,7 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(
     send_daily_report,
     'interval',
-    minutes=1,
+    minutes=240,
     args=[bot, chat_id_dao],
     timezone=pytz.timezone("Asia/Ho_Chi_Minh")  # vẫn cần pytz
 )

@@ -50,7 +50,7 @@ def send_daily_report(bot: Bot, chat_id: int):
 
     """
     results = db.fetchall(query, (tomorrow_day,))
-    print(results)
+    
     if not results:
         bot.send_message(
             chat_id=chat_id,
